@@ -4,6 +4,7 @@ const helmet = require("helmet");
 const pinoHttp = require("pino-http");
 
 const logger = require("./config/logger");
+const authRoutes = require("./routes/auth.routes");
 const healthRoutes = require("./routes/health.routes");
 const notFound = require("./middlewares/notFound");
 const errorHandler = require("./middlewares/errorHandler");
@@ -24,6 +25,7 @@ app.use(
 );
 
 app.use("/api/health", healthRoutes);
+app.use("/api/auth", authRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
