@@ -9,10 +9,65 @@ body {
 }
 
 .container {
-  max-width: 760px;
+  max-width: 900px;
   margin: 3rem auto;
+  padding: 1rem;
+}
+
+.auth-card,
+.dashboard-card {
   padding: 2rem;
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.auth-form {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.auth-form input {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0.7rem;
+  font-size: 1rem;
+}
+
+button {
+  border: 0;
+  border-radius: 8px;
+  padding: 0.7rem 1rem;
+  background: #0f766e;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.auth-switch {
+  margin-top: 1rem;
+}
+
+.error-text {
+  color: #b91c1c;
+  margin: 0;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.notes-placeholder {
+  margin-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1rem;
 }
