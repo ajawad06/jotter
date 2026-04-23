@@ -93,4 +93,55 @@ describe("Note service", () => {
     const result = await noteService.deleteUserNote(2, 5);
     expect(result).to.deep.equal({ deleted: true });
   });
+
+  it("rejects invalid color format on update", async () => {
+    const noteService = createNoteService({
+      noteRepository: {
+        updateByIdAndUserId: async () => true,
+        findByIdAndUserId: async () => ({ id: 1 }),
+      },
+    });
+
+    try {
+      await noteService.updateUserNote(1, 1, { color: "blue" });
+      throw new Error("Expected updateUserNote to fail");
+    } catch (error) {
+      expect(error).to.be.instanceOf(AppError);
+      expect(error.statusCode).to.equal(400);
+    }
+  });
+
+  it("updates metadata fields for existing note", async () => {
+    const fakeRepository = {
+      updateByIdAndUserId: async (_noteId, _userId, fields) => {
+        expect(fields).to.deep.equal({
+          color: "#fff475",
+          isPinned: true,
+          isArchived: false,
+          isTrashed: false,
+        });
+        return true;
+      },
+      findByIdAndUserId: async () => ({
+        id: 9,
+        title: "Meta",
+        content: "Updated",
+        color: "#fff475",
+        isPinned: true,
+        isArchived: false,
+        isTrashed: false,
+      }),
+    };
+
+    const noteService = createNoteService({ noteRepository: fakeRepository });
+    const result = await noteService.updateUserNote(1, 9, {
+      color: "#fff475",
+      isPinned: true,
+      isArchived: false,
+      isTrashed: false,
+    });
+
+    expect(result.id).to.equal(9);
+    expect(result.isPinned).to.equal(true);
+  });
 });
