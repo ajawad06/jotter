@@ -82,7 +82,11 @@ function App() {
           path="/dashboard"
           element={
             <ProtectedRoute isAuthenticated={isAuthenticated}>
-              <DashboardPage user={session.user} onLogout={handleLogout} />
+              <DashboardPage
+                token={session.token}
+                user={session.user}
+                onLogout={handleLogout}
+              />
             </ProtectedRoute>
           }
         />
