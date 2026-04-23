@@ -1,30 +1,501 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PropTypes from "prop-types";
 
-function DashboardPage({ user = null, onLogout }) {
+import {
+  createNote,
+  deleteNote,
+  listNotes,
+  updateNote,
+  updateNoteAppearance,
+} from "../api/noteApi";
+
+const SIDEBAR_ITEMS = [
+  { key: "notes", icon: "📝", label: "Notes" },
+  { key: "reminders", icon: "⏰", label: "Reminders" },
+  { key: "labels", icon: "🏷", label: "Edit Labels" },
+  { key: "archive", icon: "🗄", label: "Archive" },
+  { key: "trash", icon: "🗑", label: "Trash" },
+];
+
+const NOTE_COLORS = [
+  "#ffffff",
+  "#f28b82",
+  "#fbbc04",
+  "#fff475",
+  "#ccff90",
+  "#a7ffeb",
+  "#cbf0f8",
+  "#aecbfa",
+  "#d7aefb",
+];
+
+const parseChecklist = (content) => {
+  if (!content) {
+    return null;
+  }
+
+  const lines = content.split("\n");
+  const checklistItems = lines
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("- [ ]") || line.startsWith("- [x]"));
+
+  if (checklistItems.length === 0 || checklistItems.length !== lines.length) {
+    return null;
+  }
+
+  return checklistItems.map((line) => ({
+    text: line.replace(/^- \[[x ]\]\s*/i, ""),
+    checked: line.startsWith("- [x]"),
+  }));
+};
+
+function DashboardPage({ token, user = null, onLogout }) {
+  const [notes, setNotes] = useState([]);
+  const [searchText, setSearchText] = useState("");
+  const [activeSidebarItem, setActiveSidebarItem] = useState("notes");
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isGridView, setIsGridView] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isComposerExpanded, setIsComposerExpanded] = useState(false);
+  const [isEditingId, setIsEditingId] = useState(null);
+  const [formValues, setFormValues] = useState({
+    title: "",
+    content: "",
+    color: "#ffffff",
+  });
+  const composerRef = useRef(null);
+
+  const isEditMode = useMemo(() => isEditingId !== null, [isEditingId]);
+
+  const filteredNotes = useMemo(() => {
+    let scopedNotes = notes;
+
+    if (activeSidebarItem === "notes") {
+      scopedNotes = notes.filter((note) => !note.isArchived && !note.isTrashed);
+    } else if (activeSidebarItem === "archive") {
+      scopedNotes = notes.filter((note) => note.isArchived && !note.isTrashed);
+    } else if (activeSidebarItem === "trash") {
+      scopedNotes = notes.filter((note) => note.isTrashed);
+    }
+
+    if (!searchText.trim()) {
+      return scopedNotes;
+    }
+
+    const normalizedSearch = searchText.trim().toLowerCase();
+    return scopedNotes.filter(
+      (note) =>
+        note.title.toLowerCase().includes(normalizedSearch) ||
+        note.content.toLowerCase().includes(normalizedSearch),
+    );
+  }, [activeSidebarItem, notes, searchText]);
+
+  const resetForm = () => {
+    setFormValues({ title: "", content: "", color: "#ffffff" });
+    setIsEditingId(null);
+    setIsComposerExpanded(false);
+  };
+
+  const loadNotes = useCallback(async () => {
+    if (!token) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setErrorMessage("");
+
+    try {
+      const fetchedNotes = await listNotes(token);
+      setNotes(fetchedNotes);
+    } catch (error) {
+      setErrorMessage(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    loadNotes();
+  }, [loadNotes]);
+
+  const handleInputChange = (event) => {
+    const { name, value } = event.target;
+    setFormValues((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const submitDraftIfNeeded = useCallback(async () => {
+    if (isEditMode || !isComposerExpanded || isSaving) {
+      return;
+    }
+
+    const title = formValues.title.trim();
+    const content = formValues.content.trim();
+
+    if (!title && !content) {
+      resetForm();
+      return;
+    }
+
+    if (!content) {
+      setErrorMessage("Content is required");
+      return;
+    }
+
+    setErrorMessage("");
+    setIsSaving(true);
+
+    try {
+      const createdNote = await createNote(token, {
+        title: title || "Untitled",
+        content,
+        color: formValues.color,
+      });
+      setNotes((prev) => [createdNote, ...prev]);
+      resetForm();
+    } catch (error) {
+      setErrorMessage(error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [formValues, isComposerExpanded, isEditMode, isSaving, token]);
+
+  useEffect(() => {
+    const handleClickOutside = async (event) => {
+      if (!isComposerExpanded) {
+        return;
+      }
+
+      if (composerRef.current && !composerRef.current.contains(event.target)) {
+        await submitDraftIfNeeded();
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isComposerExpanded, submitDraftIfNeeded]);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setErrorMessage("");
+    setIsSaving(true);
+
+    try {
+      if (isEditMode) {
+        const updatedNote = await updateNote(token, isEditingId, formValues);
+        setNotes((prev) =>
+          prev.map((note) => (note.id === isEditingId ? updatedNote : note)),
+        );
+        resetForm();
+      } else {
+        const createdNote = await createNote(token, {
+          title: formValues.title.trim() || "Untitled",
+          content: formValues.content,
+          color: formValues.color,
+        });
+        setNotes((prev) => [createdNote, ...prev]);
+        resetForm();
+      }
+    } catch (error) {
+      setErrorMessage(error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleStartEdit = (note) => {
+    setFormValues({
+      title: note.title,
+      content: note.content,
+      color: note.color || "#ffffff",
+    });
+    setIsEditingId(note.id);
+    setIsComposerExpanded(true);
+  };
+
+  const handleColorChange = async (noteId, color) => {
+    setErrorMessage("");
+
+    try {
+      const updatedNote = await updateNoteAppearance(token, noteId, { color });
+      setNotes((prev) =>
+        prev.map((note) => (note.id === noteId ? updatedNote : note)),
+      );
+    } catch (error) {
+      setErrorMessage(error.message);
+    }
+  };
+
+  const handleToggleField = async (note, field) => {
+    setErrorMessage("");
+
+    try {
+      const payload = { [field]: !note[field] };
+      if (field === "isTrashed" && !note.isTrashed) {
+        payload.isArchived = false;
+      }
+
+      const updatedNote = await updateNoteAppearance(token, note.id, payload);
+      setNotes((prev) =>
+        prev.map((current) => (current.id === note.id ? updatedNote : current)),
+      );
+    } catch (error) {
+      setErrorMessage(error.message);
+    }
+  };
+
+  const handleDelete = async (noteId) => {
+    setErrorMessage("");
+
+    try {
+      await deleteNote(token, noteId);
+      setNotes((prev) => prev.filter((note) => note.id !== noteId));
+
+      if (isEditingId === noteId) {
+        resetForm();
+      }
+    } catch (error) {
+      setErrorMessage(error.message);
+    }
+  };
+
   return (
-    <section className="dashboard-card">
-      <header className="dashboard-header">
-        <div>
-          <h1>Dashboard</h1>
-          <p>Welcome, {user?.name || user?.email}.</p>
+    <section className={`keep-layout ${isDarkMode ? "dark-mode" : ""}`}>
+      <header className="keep-header">
+        <div className="keep-brand">
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={() => setIsSidebarCollapsed((prev) => !prev)}
+            aria-label="Toggle sidebar"
+          >
+            ☰
+          </button>
+          <span className="keep-logo">💡</span>
+          <span className="keep-title">Keep</span>
         </div>
-        <button type="button" onClick={onLogout}>
-          Logout
-        </button>
+
+        <div className="keep-search-wrap">
+          <span className="search-icon">🔍</span>
+          <input
+            type="text"
+            className="keep-search"
+            placeholder="Search"
+            value={searchText}
+            onChange={(event) => setSearchText(event.target.value)}
+          />
+        </div>
+
+        <div className="keep-actions">
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={() => setIsGridView((prev) => !prev)}
+            aria-label="Toggle view mode"
+          >
+            {isGridView ? "☷" : "☰"}
+          </button>
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={() => setIsDarkMode((prev) => !prev)}
+            aria-label="Toggle dark mode"
+          >
+            {isDarkMode ? "🌞" : "🌙"}
+          </button>
+          <button
+            type="button"
+            className="avatar-btn"
+            onClick={onLogout}
+            title="Logout"
+            aria-label="Logout"
+          >
+            {(user?.name || user?.email || "U").charAt(0).toUpperCase()}
+          </button>
+        </div>
       </header>
 
-      <div className="notes-placeholder">
-        <h2>Your notes</h2>
-        <p>
-          Day 3 complete: authentication flow is connected. Notes CRUD starts
-          next.
-        </p>
+      <div className="keep-body">
+        <aside
+          className={`keep-sidebar ${isSidebarCollapsed ? "collapsed" : ""}`}
+        >
+          {SIDEBAR_ITEMS.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              className={`sidebar-item ${activeSidebarItem === item.key ? "active" : ""}`}
+              onClick={() => setActiveSidebarItem(item.key)}
+            >
+              <span>{item.icon}</span>
+              {!isSidebarCollapsed && <span>{item.label}</span>}
+            </button>
+          ))}
+        </aside>
+
+        <section className="keep-main">
+          <form
+            className={`take-note ${isComposerExpanded ? "expanded" : ""}`}
+            onSubmit={handleSubmit}
+            ref={composerRef}
+          >
+            {isComposerExpanded && (
+              <input
+                name="title"
+                type="text"
+                placeholder="Title"
+                value={formValues.title}
+                onChange={handleInputChange}
+              />
+            )}
+
+            <textarea
+              name="content"
+              placeholder="Take a note..."
+              value={formValues.content}
+              rows={isComposerExpanded ? 4 : 1}
+              onFocus={() => setIsComposerExpanded(true)}
+              onChange={handleInputChange}
+            />
+
+            {isComposerExpanded && (
+              <div className="take-note-footer">
+                <div className="palette">
+                  {NOTE_COLORS.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      className={`color-dot ${formValues.color === color ? "selected" : ""}`}
+                      style={{ background: color }}
+                      onClick={() =>
+                        setFormValues((prev) => ({ ...prev, color }))
+                      }
+                      aria-label={`Select color ${color}`}
+                    />
+                  ))}
+                </div>
+                <div className="composer-actions">
+                  <button type="submit" disabled={isSaving}>
+                    {isSaving ? "Saving..." : isEditMode ? "Update" : "Add"}
+                  </button>
+                  <button
+                    type="button"
+                    className="text-btn"
+                    onClick={submitDraftIfNeeded}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            )}
+          </form>
+
+          {errorMessage && <p className="error-text">{errorMessage}</p>}
+
+          <div className="notes-section-header">
+            <h2>Notes</h2>
+            <button type="button" className="text-btn" onClick={loadNotes}>
+              Refresh
+            </button>
+          </div>
+
+          {isLoading ? (
+            <p>Loading notes...</p>
+          ) : filteredNotes.length === 0 ? (
+            <p>No notes found in this section.</p>
+          ) : (
+            <div className={isGridView ? "keep-masonry" : "keep-list"}>
+              {filteredNotes.map((note) => {
+                const checklist = parseChecklist(note.content);
+                return (
+                  <article
+                    key={note.id}
+                    className="keep-note-card"
+                    style={{ background: note.color || "#ffffff" }}
+                  >
+                    <div className="note-card-head">
+                      <h3>{note.title}</h3>
+                      <button
+                        type="button"
+                        className="icon-btn card-pin"
+                        onClick={() => handleToggleField(note, "isPinned")}
+                        aria-label="Toggle pin"
+                      >
+                        {note.isPinned ? "📌" : "📍"}
+                      </button>
+                    </div>
+                    {checklist ? (
+                      <ul className="checklist-view">
+                        {checklist.map((item, index) => (
+                          <li key={`${note.id}-${index}`}>
+                            <input
+                              type="checkbox"
+                              checked={item.checked}
+                              readOnly
+                            />
+                            <span>{item.text}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>{note.content}</p>
+                    )}
+
+                    <div className="keep-card-toolbar">
+                      <button
+                        type="button"
+                        onClick={() => handleStartEdit(note)}
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(note.id)}
+                      >
+                        🗑 Delete
+                      </button>
+                      <div className="inline-palette">
+                        {NOTE_COLORS.slice(0, 5).map((color) => (
+                          <button
+                            key={`${note.id}-${color}`}
+                            type="button"
+                            className="mini-color-dot"
+                            style={{ background: color }}
+                            onClick={() => handleColorChange(note.id, color)}
+                            aria-label={`Change note color ${color}`}
+                          />
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleField(note, "isArchived")}
+                      >
+                        🗄 Archive
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleField(note, "isTrashed")}
+                      >
+                        {note.isTrashed ? "↩ Restore" : "🗑 Trash"}
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
       </div>
     </section>
   );
 }
 
 DashboardPage.propTypes = {
+  token: PropTypes.string,
   user: PropTypes.shape({
     name: PropTypes.string,
     email: PropTypes.string,

@@ -26,6 +26,9 @@ describe("App", () => {
   it("logs user in and redirects to dashboard", async () => {
     globalThis.fetch.mockResolvedValueOnce({
       ok: true,
+      headers: {
+        get: () => "application/json",
+      },
       json: async () => ({
         data: {
           token: "test-token",
@@ -34,6 +37,15 @@ describe("App", () => {
             email: "abdullah@example.com",
           },
         },
+      }),
+    });
+    globalThis.fetch.mockResolvedValueOnce({
+      ok: true,
+      headers: {
+        get: () => "application/json",
+      },
+      json: async () => ({
+        data: [],
       }),
     });
 
@@ -49,12 +61,22 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
     expect(
-      await screen.findByRole("heading", { name: "Dashboard" }),
+      await screen.findByRole("heading", { name: "Notes" }),
     ).toBeInTheDocument();
     expect(localStorage.getItem("notes_app_token")).toBe("test-token");
   });
 
   it("logs out and redirects to login", async () => {
+    globalThis.fetch.mockResolvedValueOnce({
+      ok: true,
+      headers: {
+        get: () => "application/json",
+      },
+      json: async () => ({
+        data: [],
+      }),
+    });
+
     localStorage.setItem("notes_app_token", "already-authenticated");
     localStorage.setItem(
       "notes_app_user",
