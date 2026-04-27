@@ -1,14 +1,17 @@
 const API_BASE_URL = "http://localhost:5000/api/auth";
 
 const parseApiResponse = async (response) => {
-  const contentType = response.headers.get("content-type") || "";
-  const isJsonResponse = contentType.includes("application/json");
+  const contentType = response?.headers?.get?.("content-type") || "";
+  const canParseJson = typeof response?.json === "function";
+  const isJsonResponse =
+    !contentType || contentType.includes("application/json");
 
-  const data = isJsonResponse
-    ? await response.json()
-    : {
-        message: "Server returned an unexpected response format",
-      };
+  const data =
+    canParseJson && isJsonResponse
+      ? await response.json()
+      : {
+          message: "Server returned an unexpected response format",
+        };
 
   if (!response.ok) {
     throw new Error(data.message || "Request failed");
