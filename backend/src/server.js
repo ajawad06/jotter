@@ -1,10 +1,10 @@
 const app = require("./app");
 const env = require("./config/env");
 const logger = require("./config/logger");
-const { verifyConnection } = require("./db/mysql");
+const { verifyMongoConnection } = require("./db/mongodb");
 
 const startServer = async () => {
-  await verifyConnection();
+  await verifyMongoConnection();
 
   const server = app.listen(env.port, () => {
     logger.info(`Backend server running on port ${env.port}`);

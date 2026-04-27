@@ -1,9 +1,19 @@
-const { getPool } = require("../db/mysql");
+const Note = require("../models/note.model");
 
-const NOTE_SELECT_FIELDS =
-  "id, user_id AS userId, title, content, color, is_pinned AS isPinned, is_archived AS isArchived, is_trashed AS isTrashed, created_at AS createdAt, updated_at AS updatedAt";
+const mapNote = (note) => ({
+  id: note._id.toString(),
+  userId: note.user_id.toString(),
+  title: note.title,
+  content: note.content,
+  color: note.color,
+  isPinned: Boolean(note.is_pinned),
+  isArchived: Boolean(note.is_archived),
+  isTrashed: Boolean(note.is_trashed),
+  createdAt: note.created_at,
+  updatedAt: note.updated_at,
+});
 
-const createNoteRepository = (db = getPool()) => ({
+const createNoteRepository = (noteModel = Note) => ({
   async createNote({
     userId,
     title,
@@ -13,96 +23,79 @@ const createNoteRepository = (db = getPool()) => ({
     isArchived,
     isTrashed,
   }) {
-    const [result] = await db.execute(
-      "INSERT INTO notes (user_id, title, content, color, is_pinned, is_archived, is_trashed) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [userId, title, content, color, isPinned, isArchived, isTrashed],
-    );
-
-    return {
-      id: result.insertId,
-      userId,
+    const createdNote = await noteModel.create({
+      user_id: userId,
       title,
       content,
       color,
-      isPinned,
-      isArchived,
-      isTrashed,
-    };
+      is_pinned: isPinned,
+      is_archived: isArchived,
+      is_trashed: isTrashed,
+    });
+
+    return mapNote(createdNote);
   },
 
   async findAllByUserId(userId) {
-    const [rows] = await db.execute(
-      `SELECT ${NOTE_SELECT_FIELDS} FROM notes WHERE user_id = ? ORDER BY is_pinned DESC, updated_at DESC`,
-      [userId],
-    );
+    const notes = await noteModel
+      .find({ user_id: userId })
+      .sort({ is_pinned: -1, updated_at: -1 })
+      .lean();
 
-    return rows;
+    return notes.map(mapNote);
   },
 
   async findByIdAndUserId(noteId, userId) {
-    const [rows] = await db.execute(
-      `SELECT ${NOTE_SELECT_FIELDS} FROM notes WHERE id = ? AND user_id = ? LIMIT 1`,
-      [noteId, userId],
-    );
+    const note = await noteModel
+      .findOne({ _id: noteId, user_id: userId })
+      .lean();
 
-    return rows[0] || null;
+    return note ? mapNote(note) : null;
   },
 
-  async updateByIdAndUserId(noteId, userId, fields) {
-    const updates = [];
-    const values = [];
+  async updateByIdAndUserId(noteId, userId, payload) {
+    const update = {};
 
-    if (Object.hasOwn(fields, "title")) {
-      updates.push("title = ?");
-      values.push(fields.title);
+    if (payload.title !== undefined) {
+      update.title = payload.title;
     }
 
-    if (Object.hasOwn(fields, "content")) {
-      updates.push("content = ?");
-      values.push(fields.content);
+    if (payload.content !== undefined) {
+      update.content = payload.content;
     }
 
-    if (Object.hasOwn(fields, "color")) {
-      updates.push("color = ?");
-      values.push(fields.color);
+    if (payload.color !== undefined) {
+      update.color = payload.color;
     }
 
-    if (Object.hasOwn(fields, "isPinned")) {
-      updates.push("is_pinned = ?");
-      values.push(fields.isPinned);
+    if (payload.isPinned !== undefined) {
+      update.is_pinned = payload.isPinned;
     }
 
-    if (Object.hasOwn(fields, "isArchived")) {
-      updates.push("is_archived = ?");
-      values.push(fields.isArchived);
+    if (payload.isArchived !== undefined) {
+      update.is_archived = payload.isArchived;
     }
 
-    if (Object.hasOwn(fields, "isTrashed")) {
-      updates.push("is_trashed = ?");
-      values.push(fields.isTrashed);
+    if (payload.isTrashed !== undefined) {
+      update.is_trashed = payload.isTrashed;
     }
 
-    if (updates.length === 0) {
+    if (Object.keys(update).length === 0) {
       return false;
     }
 
-    values.push(noteId, userId);
-
-    const [result] = await db.execute(
-      `UPDATE notes SET ${updates.join(", ")} WHERE id = ? AND user_id = ?`,
-      values,
+    const result = await noteModel.updateOne(
+      { _id: noteId, user_id: userId },
+      update,
     );
 
-    return result.affectedRows > 0;
+    return result.modifiedCount > 0 || result.matchedCount > 0;
   },
 
   async deleteByIdAndUserId(noteId, userId) {
-    const [result] = await db.execute(
-      "DELETE FROM notes WHERE id = ? AND user_id = ?",
-      [noteId, userId],
-    );
+    const result = await noteModel.deleteOne({ _id: noteId, user_id: userId });
 
-    return result.affectedRows > 0;
+    return result.deletedCount > 0;
   },
 });
 

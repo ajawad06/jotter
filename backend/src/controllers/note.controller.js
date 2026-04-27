@@ -21,10 +21,7 @@ const createNoteController = (noteService) => ({
   }),
 
   getUserNote: asyncHandler(async (req, res) => {
-    const note = await noteService.getUserNote(
-      req.user.id,
-      Number(req.params.id),
-    );
+    const note = await noteService.getUserNote(req.user.id, req.params.id);
 
     res.status(200).json({
       success: true,
@@ -35,7 +32,7 @@ const createNoteController = (noteService) => ({
   updateUserNote: asyncHandler(async (req, res) => {
     const note = await noteService.updateUserNote(
       req.user.id,
-      Number(req.params.id),
+      req.params.id,
       req.body,
     );
 
@@ -47,7 +44,7 @@ const createNoteController = (noteService) => ({
   }),
 
   deleteUserNote: asyncHandler(async (req, res) => {
-    await noteService.deleteUserNote(req.user.id, Number(req.params.id));
+    await noteService.deleteUserNote(req.user.id, req.params.id);
 
     res.status(200).json({
       success: true,
