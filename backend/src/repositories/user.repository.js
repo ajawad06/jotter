@@ -1,25 +1,32 @@
-const { getPool } = require("../db/mysql");
+const User = require("../models/user.model");
 
-const createUserRepository = (db = getPool()) => ({
+const createUserRepository = (userModel = User) => ({
   async findByEmail(email) {
-    const [rows] = await db.execute(
-      "SELECT id, name, email, password_hash AS passwordHash FROM users WHERE email = ? LIMIT 1",
-      [email],
-    );
+    const user = await userModel.findOne({ email }).lean();
 
-    return rows[0] || null;
+    if (!user) {
+      return null;
+    }
+
+    return {
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      passwordHash: user.password_hash,
+    };
   },
 
   async createUser({ name, email, passwordHash }) {
-    const [result] = await db.execute(
-      "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
-      [name, email, passwordHash],
-    );
-
-    return {
-      id: result.insertId,
+    const createdUser = await userModel.create({
       name,
       email,
+      password_hash: passwordHash,
+    });
+
+    return {
+      id: createdUser._id.toString(),
+      name: createdUser.name,
+      email: createdUser.email,
     };
   },
 });

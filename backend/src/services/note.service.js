@@ -18,10 +18,13 @@ const createNoteService = ({ noteRepository }) => ({
   async createNote(userId, payload) {
     const title = payload?.title?.trim();
     const content = payload?.content?.trim();
-    const color = payload?.color || "#ffffff";
-    const isPinned = Boolean(payload?.isPinned);
-    const isArchived = Boolean(payload?.isArchived);
-    const isTrashed = Boolean(payload?.isTrashed);
+    const color = payload?.color?.trim() || "#ffffff";
+    const isPinned =
+      normalizeBooleanField(payload?.isPinned, "isPinned") ?? false;
+    const isArchived =
+      normalizeBooleanField(payload?.isArchived, "isArchived") ?? false;
+    const isTrashed =
+      normalizeBooleanField(payload?.isTrashed, "isTrashed") ?? false;
 
     if (!title || !content) {
       throw new AppError("Title and content are required", 400);
@@ -80,38 +83,44 @@ const createNoteService = ({ noteRepository }) => ({
     }
 
     if (Object.hasOwn(payload, "color")) {
-      if (!HEX_COLOR_REGEX.test(payload.color)) {
+      const color = payload?.color?.trim();
+
+      if (!color || !HEX_COLOR_REGEX.test(color)) {
         throw new AppError("color must be a valid hex code", 400);
       }
 
-      fieldsToUpdate.color = payload.color;
+      fieldsToUpdate.color = color;
     }
 
-    fieldsToUpdate.isPinned = normalizeBooleanField(
-      payload?.isPinned,
-      "isPinned",
-    );
-    fieldsToUpdate.isArchived = normalizeBooleanField(
-      payload?.isArchived,
-      "isArchived",
-    );
-    fieldsToUpdate.isTrashed = normalizeBooleanField(
-      payload?.isTrashed,
-      "isTrashed",
-    );
-
-    if (Object.values(fieldsToUpdate).every((value) => value === undefined)) {
-      throw new AppError("At least one field is required for update", 400);
+    if (Object.hasOwn(payload, "isPinned")) {
+      fieldsToUpdate.isPinned = normalizeBooleanField(
+        payload?.isPinned,
+        "isPinned",
+      );
     }
 
-    const sanitizedFields = Object.fromEntries(
-      Object.entries(fieldsToUpdate).filter(([, value]) => value !== undefined),
-    );
+    if (Object.hasOwn(payload, "isArchived")) {
+      fieldsToUpdate.isArchived = normalizeBooleanField(
+        payload?.isArchived,
+        "isArchived",
+      );
+    }
+
+    if (Object.hasOwn(payload, "isTrashed")) {
+      fieldsToUpdate.isTrashed = normalizeBooleanField(
+        payload?.isTrashed,
+        "isTrashed",
+      );
+    }
+
+    if (Object.keys(fieldsToUpdate).length === 0) {
+      throw new AppError("At least one valid field is required", 400);
+    }
 
     const updated = await noteRepository.updateByIdAndUserId(
       noteId,
       userId,
-      sanitizedFields,
+      fieldsToUpdate,
     );
 
     if (!updated) {
