@@ -5,6 +5,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import { login, signup } from "./api/authApi";
 import DashboardPage from "./pages/DashboardPage";
 import LoginPage from "./pages/LoginPage";
+import RichTextEditorPage from "./pages/RichTextEditorPage";
 import SignupPage from "./pages/SignupPage";
 import {
   clearSession,
@@ -87,6 +88,14 @@ function App() {
                 user={session.user}
                 onLogout={handleLogout}
               />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/editor"
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <RichTextEditorPage token={session.token} />
             </ProtectedRoute>
           }
         />

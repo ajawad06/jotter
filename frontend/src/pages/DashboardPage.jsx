@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
 
 import {
@@ -13,7 +14,7 @@ const SIDEBAR_ITEMS = [
   { key: "notes", icon: "📝", label: "Notes" },
   { key: "reminders", icon: "⏰", label: "Reminders" },
   { key: "labels", icon: "🏷", label: "Edit Labels" },
-  { key: "archive", icon: "🗄", label: "Archive" },
+  { key: "archive", icon: "🗄️", label: "Archive" },
   { key: "trash", icon: "🗑", label: "Trash" },
 ];
 
@@ -67,6 +68,7 @@ function DashboardPage({ token, user = null, onLogout }) {
     color: "#ffffff",
   });
   const composerRef = useRef(null);
+  const navigate = useNavigate();
 
   const isEditMode = useMemo(() => isEditingId !== null, [isEditingId]);
 
@@ -218,6 +220,25 @@ function DashboardPage({ token, user = null, onLogout }) {
     setIsComposerExpanded(true);
   };
 
+  const handleOpenRichEditor = () => {
+    const title = formValues.title.trim();
+    const content = formValues.content.trim();
+
+    if (!title && !content) {
+      setIsComposerExpanded(true);
+      return;
+    }
+
+    navigate("/editor", {
+      state: {
+        noteId: isEditMode ? isEditingId : null,
+        title,
+        content,
+        color: formValues.color,
+      },
+    });
+  };
+
   const handleColorChange = async (noteId, color) => {
     setErrorMessage("");
 
@@ -350,6 +371,7 @@ function DashboardPage({ token, user = null, onLogout }) {
                 placeholder="Title"
                 value={formValues.title}
                 onChange={handleInputChange}
+                className="take-note-title"
               />
             )}
 
@@ -360,6 +382,7 @@ function DashboardPage({ token, user = null, onLogout }) {
               rows={isComposerExpanded ? 4 : 1}
               onFocus={() => setIsComposerExpanded(true)}
               onChange={handleInputChange}
+              className="take-note-input"
             />
 
             {isComposerExpanded && (
@@ -379,6 +402,13 @@ function DashboardPage({ token, user = null, onLogout }) {
                   ))}
                 </div>
                 <div className="composer-actions">
+                  <button
+                    type="button"
+                    className="text-btn"
+                    onClick={handleOpenRichEditor}
+                  >
+                    Open editor
+                  </button>
                   <button type="submit" disabled={isSaving}>
                     {isSaving ? "Saving..." : isEditMode ? "Update" : "Add"}
                   </button>
@@ -411,6 +441,7 @@ function DashboardPage({ token, user = null, onLogout }) {
             <div className={isGridView ? "keep-masonry" : "keep-list"}>
               {filteredNotes.map((note) => {
                 const checklist = parseChecklist(note.content);
+                const isHtmlContent = /<[^>]+>/.test(note.content);
                 return (
                   <article
                     key={note.id}
@@ -441,6 +472,11 @@ function DashboardPage({ token, user = null, onLogout }) {
                           </li>
                         ))}
                       </ul>
+                    ) : isHtmlContent ? (
+                      <div
+                        className="note-html-preview"
+                        dangerouslySetInnerHTML={{ __html: note.content }}
+                      />
                     ) : (
                       <p>{note.content}</p>
                     )}
@@ -456,10 +492,10 @@ function DashboardPage({ token, user = null, onLogout }) {
                         type="button"
                         onClick={() => handleDelete(note.id)}
                       >
-                        🗑 Delete
+                        ❌ Delete
                       </button>
                       <div className="inline-palette">
-                        {NOTE_COLORS.slice(0, 5).map((color) => (
+                        {NOTE_COLORS.map((color) => (
                           <button
                             key={`${note.id}-${color}`}
                             type="button"
@@ -474,13 +510,13 @@ function DashboardPage({ token, user = null, onLogout }) {
                         type="button"
                         onClick={() => handleToggleField(note, "isArchived")}
                       >
-                        🗄 Archive
+                        🗄️ Archive
                       </button>
                       <button
                         type="button"
                         onClick={() => handleToggleField(note, "isTrashed")}
                       >
-                        {note.isTrashed ? "↩ Restore" : "🗑 Trash"}
+                        {note.isTrashed ? "↩ Restore" : "🗑️ Trash"}
                       </button>
                     </div>
                   </article>
