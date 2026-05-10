@@ -28,42 +28,55 @@ function LoginPage({ onLogin, isSubmitting }) {
   };
 
   return (
-    <section className="auth-card">
-      <h1>Login</h1>
-      <p>Welcome back. Sign in to manage your notes.</p>
+    <div className="auth-container">
+      <section className="auth-card">
+        <div className="auth-logo-circle">📝</div>
+        <h1>Login</h1>
+        <p>Your ideas are waiting for you.</p>
 
-      <form onSubmit={handleSubmit} className="auth-form">
-        <label htmlFor="login-email">Email</label>
-        <input
-          id="login-email"
-          name="email"
-          type="email"
-          value={formValues.email}
-          onChange={handleChange}
-          required
-        />
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="auth-field">
+            <label htmlFor="login-email">Email</label>
+            <input
+              id="login-email"
+              name="email"
+              type="email"
+              value={formValues.email}
+              onChange={handleChange}
+              placeholder="Enter your email"
+              required
+            />
+          </div>
 
-        <label htmlFor="login-password">Password</label>
-        <input
-          id="login-password"
-          name="password"
-          type="password"
-          value={formValues.password}
-          onChange={handleChange}
-          required
-        />
+          <div className="auth-field">
+            <label htmlFor="login-password">Password</label>
+            <input
+              id="login-password"
+              name="password"
+              type="password"
+              value={formValues.password}
+              onChange={handleChange}
+              placeholder="Enter your password"
+              required
+            />
+          </div>
 
-        {errorMessage && <p className="error-text">{errorMessage}</p>}
+          {errorMessage && <p className="error-text">{errorMessage}</p>}
 
-        <button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Signing in..." : "Sign in"}
-        </button>
-      </form>
+          <button
+            type="submit"
+            className="auth-submit-btn"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Signing in..." : "Sign in"}
+          </button>
+        </form>
 
-      <p className="auth-switch">
-        New user? <Link to="/signup">Create an account</Link>
-      </p>
-    </section>
+        <p className="auth-switch">
+          New user? <Link to="/signup">Create an account</Link>
+        </p>
+      </section>
+    </div>
   );
 }
 
