@@ -32,7 +32,7 @@ function SignupPage({ onSignup, isSubmitting }) {
     <div className="auth-container">
       <section className="auth-card">
         <div className="auth-logo-circle">📝</div>
-        <h1>Get Started</h1>
+        <h1>Sign up</h1>
         <p>Capture everything that matters.</p>
 
         <form onSubmit={handleSubmit} className="auth-form">

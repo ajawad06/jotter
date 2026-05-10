@@ -31,7 +31,7 @@ function LoginPage({ onLogin, isSubmitting }) {
     <div className="auth-container">
       <section className="auth-card">
         <div className="auth-logo-circle">📝</div>
-        <h1>Welcome Back</h1>
+        <h1>Login</h1>
         <p>Your ideas are waiting for you.</p>
 
         <form onSubmit={handleSubmit} className="auth-form">
