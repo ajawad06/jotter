@@ -29,53 +29,69 @@ function SignupPage({ onSignup, isSubmitting }) {
   };
 
   return (
-    <section className="auth-card">
-      <h1>Sign up</h1>
-      <p>Create your account to save private notes.</p>
+    <div className="auth-container">
+      <section className="auth-card">
+        <div className="auth-logo-circle">📝</div>
+        <h1>Get Started</h1>
+        <p>Capture everything that matters.</p>
 
-      <form onSubmit={handleSubmit} className="auth-form">
-        <label htmlFor="signup-name">Name</label>
-        <input
-          id="signup-name"
-          name="name"
-          type="text"
-          value={formValues.name}
-          onChange={handleChange}
-          required
-        />
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="auth-field">
+            <label htmlFor="signup-name">Name</label>
+            <input
+              id="signup-name"
+              name="name"
+              type="text"
+              value={formValues.name}
+              onChange={handleChange}
+              placeholder="Enter your name"
+              required
+            />
+          </div>
 
-        <label htmlFor="signup-email">Email</label>
-        <input
-          id="signup-email"
-          name="email"
-          type="email"
-          value={formValues.email}
-          onChange={handleChange}
-          required
-        />
+          <div className="auth-field">
+            <label htmlFor="signup-email">Email</label>
+            <input
+              id="signup-email"
+              name="email"
+              type="email"
+              value={formValues.email}
+              onChange={handleChange}
+              placeholder="Enter your email"
+              required
+            />
+          </div>
 
-        <label htmlFor="signup-password">Password</label>
-        <input
-          id="signup-password"
-          name="password"
-          type="password"
-          value={formValues.password}
-          onChange={handleChange}
-          required
-          minLength={6}
-        />
+          <div className="auth-field">
+            <label htmlFor="signup-password">Password</label>
+            <input
+              id="signup-password"
+              name="password"
+              type="password"
+              value={formValues.password}
+              onChange={handleChange}
+              placeholder="Create a password"
+              required
+              minLength={6}
+            />
+          </div>
 
-        {errorMessage && <p className="error-text">{errorMessage}</p>}
+          {errorMessage && <p className="error-text">{errorMessage}</p>}
 
-        <button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Creating account..." : "Create account"}
-        </button>
-      </form>
+          <button
+            type="submit"
+            className="auth-submit-btn"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Creating account..." : "Create account"}
+          </button>
+        </form>
 
-      <p className="auth-switch">
-        Already registered? <Link to="/login">Sign in</Link>
-      </p>
-    </section>
+        <p className="auth-switch">
+          Already registered? <Link to="/login">Sign in</Link>
+        </p>
+      </section>
+    </div>
   );
 }
 
