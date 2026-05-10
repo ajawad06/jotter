@@ -1,8 +1,11 @@
 const asyncHandler = require("../utils/asyncHandler");
+const logger = require("../config/logger");
 
 const createNoteController = (noteService) => ({
   createNote: asyncHandler(async (req, res) => {
     const note = await noteService.createNote(req.user.id, req.body);
+
+    logger.info({ userId: req.user.id, noteId: note.id }, "Note created");
 
     res.status(201).json({
       success: true,
@@ -36,6 +39,8 @@ const createNoteController = (noteService) => ({
       req.body,
     );
 
+    logger.info({ userId: req.user.id, noteId: note.id }, "Note updated");
+
     res.status(200).json({
       success: true,
       message: "Note updated successfully",
@@ -45,6 +50,8 @@ const createNoteController = (noteService) => ({
 
   deleteUserNote: asyncHandler(async (req, res) => {
     await noteService.deleteUserNote(req.user.id, req.params.id);
+
+    logger.info({ userId: req.user.id, noteId: req.params.id }, "Note deleted");
 
     res.status(200).json({
       success: true,

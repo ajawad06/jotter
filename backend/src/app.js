@@ -22,6 +22,21 @@ app.use(
       `${req.method} ${req.url} completed with ${res.statusCode}`,
     customErrorMessage: (req, res, err) =>
       `${req.method} ${req.url} failed: ${err.message}`,
+    serializers: {
+      req: (req) => ({
+        id: req.id,
+        method: req.method,
+        url: req.url,
+        query: req.query,
+        params: req.params,
+        // Body is sensitive, usually excluded or redacted in production
+      }),
+      res: (res) => ({
+        statusCode: res.statusCode,
+      }),
+    },
+    genReqId: (req) =>
+      req.headers["x-request-id"] || Math.random().toString(36).substring(7),
   }),
 );
 
