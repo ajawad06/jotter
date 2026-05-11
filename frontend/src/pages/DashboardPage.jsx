@@ -21,12 +21,9 @@ import {
   IconRefresh,
   IconGridView,
   IconListView,
-  IconSettings,
   IconDarkMode,
   IconLightMode,
-  IconPin,
   IconPalette,
-  IconNotesApp,
   IconDelete,
 } from "../components/Icons";
 
@@ -528,6 +525,18 @@ function DashboardPage({ token, user = null, onLogout }) {
                       >
                         <IconDelete />
                       </button>
+                      <div className="inline-palette">
+                        {NOTE_COLORS.map((color) => (
+                          <button
+                            key={`${note.id}-${color}`}
+                            type="button"
+                            className="mini-color-dot"
+                            style={{ background: color }}
+                            onClick={() => handleColorChange(note.id, color)}
+                            aria-label={`Change note color ${color}`}
+                          />
+                        ))}
+                      </div>
                       <button
                         type="button"
                         className="icon-btn"

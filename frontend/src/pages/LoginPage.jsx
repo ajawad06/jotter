@@ -1,7 +1,6 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
 import { Link, useNavigate } from "react-router-dom";
-import { IconNotesApp } from "../components/Icons";
 
 function LoginPage({ onLogin, isSubmitting }) {
   const navigate = useNavigate();

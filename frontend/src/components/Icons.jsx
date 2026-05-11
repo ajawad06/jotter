@@ -1,5 +1,3 @@
-import React from "react";
-
 export const IconNotes = () => (
   <svg
     width="24"
