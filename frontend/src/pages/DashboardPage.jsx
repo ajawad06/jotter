@@ -10,12 +10,32 @@ import {
   updateNoteAppearance,
 } from "../api/noteApi";
 
+import {
+  IconNotes,
+  IconReminder,
+  IconArchive,
+  IconTrash,
+  IconLabel,
+  IconSearch,
+  IconMenu,
+  IconRefresh,
+  IconGridView,
+  IconListView,
+  IconSettings,
+  IconDarkMode,
+  IconLightMode,
+  IconPin,
+  IconPalette,
+  IconNotesApp,
+  IconDelete,
+} from "../components/Icons";
+
 const SIDEBAR_ITEMS = [
-  { key: "notes", icon: "📝", label: "Notes" },
-  { key: "reminders", icon: "⏰", label: "Reminders" },
-  { key: "labels", icon: "🏷", label: "Edit Labels" },
-  { key: "archive", icon: "🗄️", label: "Archive" },
-  { key: "trash", icon: "🗑", label: "Trash" },
+  { key: "notes", icon: <IconNotes />, label: "Notes" },
+  { key: "reminders", icon: <IconReminder />, label: "Reminders" },
+  { key: "labels", icon: <IconLabel />, label: "Edit Labels" },
+  { key: "archive", icon: <IconArchive />, label: "Archive" },
+  { key: "trash", icon: <IconTrash />, label: "Trash" },
 ];
 
 const NOTE_COLORS = [
@@ -295,14 +315,16 @@ function DashboardPage({ token, user = null, onLogout }) {
             onClick={() => setIsSidebarCollapsed((prev) => !prev)}
             aria-label="Toggle sidebar"
           >
-            ☰
+            <IconMenu />
           </button>
           <span className="keep-logo">💡</span>
           <span className="keep-title">Keep</span>
         </div>
 
         <div className="keep-search-wrap">
-          <span className="search-icon">🔍</span>
+          <span className="search-icon">
+            <IconSearch />
+          </span>
           <input
             type="text"
             className="keep-search"
@@ -319,7 +341,7 @@ function DashboardPage({ token, user = null, onLogout }) {
             onClick={() => setIsGridView((prev) => !prev)}
             aria-label="Toggle view mode"
           >
-            {isGridView ? "☷" : "☰"}
+            {isGridView ? <IconListView /> : <IconGridView />}
           </button>
           <button
             type="button"
@@ -327,7 +349,7 @@ function DashboardPage({ token, user = null, onLogout }) {
             onClick={() => setIsDarkMode((prev) => !prev)}
             aria-label="Toggle dark mode"
           >
-            {isDarkMode ? "🌞" : "🌙"}
+            {isDarkMode ? <IconLightMode /> : <IconDarkMode />}
           </button>
           <button
             type="button"
@@ -387,19 +409,22 @@ function DashboardPage({ token, user = null, onLogout }) {
 
             {isComposerExpanded && (
               <div className="take-note-footer">
-                <div className="palette">
-                  {NOTE_COLORS.map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      className={`color-dot ${formValues.color === color ? "selected" : ""}`}
-                      style={{ background: color }}
-                      onClick={() =>
-                        setFormValues((prev) => ({ ...prev, color }))
-                      }
-                      aria-label={`Select color ${color}`}
-                    />
-                  ))}
+                <div className="palette-container">
+                  <IconPalette />
+                  <div className="palette">
+                    {NOTE_COLORS.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        className={`color-dot ${formValues.color === color ? "selected" : ""}`}
+                        style={{ background: color }}
+                        onClick={() =>
+                          setFormValues((prev) => ({ ...prev, color }))
+                        }
+                        aria-label={`Select color ${color}`}
+                      />
+                    ))}
+                  </div>
                 </div>
                 <div className="composer-actions">
                   <button
@@ -428,8 +453,13 @@ function DashboardPage({ token, user = null, onLogout }) {
 
           <div className="notes-section-header">
             <h2>Notes</h2>
-            <button type="button" className="text-btn" onClick={loadNotes}>
-              Refresh
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={loadNotes}
+              title="Refresh"
+            >
+              <IconRefresh />
             </button>
           </div>
 
@@ -456,7 +486,7 @@ function DashboardPage({ token, user = null, onLogout }) {
                         onClick={() => handleToggleField(note, "isPinned")}
                         aria-label="Toggle pin"
                       >
-                        {note.isPinned ? "📌" : "📍"}
+                        {note.isPinned ? "📍" : "📌"}
                       </button>
                     </div>
                     {checklist ? (
@@ -484,39 +514,35 @@ function DashboardPage({ token, user = null, onLogout }) {
                     <div className="keep-card-toolbar">
                       <button
                         type="button"
+                        className="icon-btn"
                         onClick={() => handleStartEdit(note)}
+                        title="Edit"
                       >
-                        ✏️ Edit
+                        <IconLabel />
                       </button>
                       <button
                         type="button"
+                        className="icon-btn"
                         onClick={() => handleDelete(note.id)}
+                        title="Delete Permanently"
                       >
-                        ❌ Delete
+                        <IconDelete />
                       </button>
-                      <div className="inline-palette">
-                        {NOTE_COLORS.map((color) => (
-                          <button
-                            key={`${note.id}-${color}`}
-                            type="button"
-                            className="mini-color-dot"
-                            style={{ background: color }}
-                            onClick={() => handleColorChange(note.id, color)}
-                            aria-label={`Change note color ${color}`}
-                          />
-                        ))}
-                      </div>
                       <button
                         type="button"
+                        className="icon-btn"
                         onClick={() => handleToggleField(note, "isArchived")}
+                        title="Archive"
                       >
-                        🗄️ Archive
+                        <IconArchive />
                       </button>
                       <button
                         type="button"
+                        className="icon-btn"
                         onClick={() => handleToggleField(note, "isTrashed")}
+                        title={note.isTrashed ? "Restore" : "Move to Trash"}
                       >
-                        {note.isTrashed ? "↩ Restore" : "🗑️ Trash"}
+                        {note.isTrashed ? <IconRefresh /> : <IconTrash />}
                       </button>
                     </div>
                   </article>

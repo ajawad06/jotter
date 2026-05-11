@@ -1,6 +1,7 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
 import { Link, useNavigate } from "react-router-dom";
+import { IconNotesApp } from "../components/Icons";
 
 function LoginPage({ onLogin, isSubmitting }) {
   const navigate = useNavigate();
@@ -30,7 +31,7 @@ function LoginPage({ onLogin, isSubmitting }) {
   return (
     <div className="auth-container">
       <section className="auth-card">
-        <div className="auth-logo-circle">📝</div>
+        <div className="auth-logo-circle">💡</div>
         <h1>Login</h1>
         <p>Your ideas are waiting for you.</p>
 
