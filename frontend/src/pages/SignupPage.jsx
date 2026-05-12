@@ -31,7 +31,7 @@ function SignupPage({ onSignup, isSubmitting }) {
   return (
     <div className="auth-container">
       <section className="auth-card">
-        <div className="auth-logo-circle">📝</div>
+        <div className="auth-logo-circle">💡</div>
         <h1>Sign up</h1>
         <p>Capture everything that matters.</p>
 

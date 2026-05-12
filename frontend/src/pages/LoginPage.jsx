@@ -30,7 +30,7 @@ function LoginPage({ onLogin, isSubmitting }) {
   return (
     <div className="auth-container">
       <section className="auth-card">
-        <div className="auth-logo-circle">📝</div>
+        <div className="auth-logo-circle">💡</div>
         <h1>Login</h1>
         <p>Your ideas are waiting for you.</p>
 

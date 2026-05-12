@@ -75,17 +75,16 @@ body {
 }
 
 .auth-logo-circle {
-  width: 52px;
-  height: 52px;
-  background: #1a73e8;
-  color: white;
-  border-radius: 12px;
+  width: 60px;
+  height: 60px;
+  background: white;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 1.25rem;
-  font-size: 1.75rem;
-  box-shadow: 0 8px 16px rgba(26, 115, 232, 0.3);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  font-size: 2rem;
 }
 
 .auth-card h1 {
@@ -319,7 +318,7 @@ body {
 }
 
 .keep-logo {
-  font-size: 1.4rem;
+  font-size: 1.8rem;
 }
 
 .keep-title {
@@ -339,7 +338,14 @@ body {
   left: 0.9rem;
   top: 50%;
   transform: translateY(-50%);
-  opacity: 0.65;
+  display: flex;
+  align-items: center;
+  color: #5f6368;
+}
+
+.search-icon svg {
+  width: 20px;
+  height: 20px;
 }
 
 .keep-search {
@@ -413,13 +419,18 @@ body {
   background: transparent;
   display: flex;
   align-items: center;
-  gap: 0.8rem;
-  padding: 0.75rem 1rem;
+  gap: 1.5rem;
+  padding: 0.75rem 1.5rem;
   border-top-right-radius: 999px;
   border-bottom-right-radius: 999px;
   color: inherit;
   cursor: pointer;
   text-align: left;
+}
+
+.sidebar-item svg {
+  width: 24px;
+  height: 24px;
 }
 
 .sidebar-item:hover {
@@ -470,8 +481,21 @@ body {
   gap: 1rem;
 }
 
-.palette,
-.inline-palette {
+.palette-container {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.palette-container svg {
+  color: #5f6368;
+}
+
+.dark-mode .palette-container svg {
+  color: #9aa0a6;
+}
+
+.palette {
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -597,7 +621,7 @@ button:disabled {
   margin-top: 0.7rem;
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.1rem;
   flex-wrap: wrap;
 }
 
@@ -605,11 +629,35 @@ button:disabled {
   opacity: 1;
 }
 
+.keep-card-toolbar .icon-btn {
+  padding: 0.35rem;
+  border-radius: 50%;
+  color: #5f6368;
+}
+
+.keep-card-toolbar .icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.dark-mode .keep-card-toolbar .icon-btn {
+  color: #9aa0a6;
+}
+
+.keep-card-toolbar .icon-btn:hover {
+  background: rgba(95, 99, 104, 0.08);
+  color: #202124;
+}
+
+.dark-mode .keep-card-toolbar .icon-btn:hover {
+  background: rgba(232, 234, 237, 0.08);
+  color: #e8eaed;
+}
+
 .keep-card-toolbar button {
   background: transparent;
   color: inherit;
   font-weight: 500;
-  padding: 0.3rem 0.45rem;
 }
 
 .card-pin {
