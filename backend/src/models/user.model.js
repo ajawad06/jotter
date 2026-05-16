@@ -19,6 +19,14 @@ const userSchema = new mongoose.Schema(
       required: true,
       alias: "passwordHash",
     },
+    profile_image: {
+      type: String,
+      alias: "profileImage",
+    },
+    profile_color: {
+      type: String,
+      alias: "profileColor",
+    },
   },
   {
     timestamps: {

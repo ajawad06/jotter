@@ -14,10 +14,7 @@ const authenticate = (req, _res, next) => {
 
   try {
     const payload = jwt.verify(token, env.jwt.secret);
-    req.user = {
-      id: payload.sub,
-      email: payload.email,
-    };
+    req.user = payload;
     return next();
   } catch {
     return next(new AppError("Invalid or expired token", 401));

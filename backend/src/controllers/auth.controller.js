@@ -25,6 +25,34 @@ const createAuthController = (authService) => ({
       data: result,
     });
   }),
+
+  getProfile: asyncHandler(async (req, res) => {
+    const user = await authService.getProfile(req.user.sub);
+
+    res.status(200).json({
+      success: true,
+      data: user,
+    });
+  }),
+
+  updateProfile: asyncHandler(async (req, res) => {
+    const user = await authService.updateProfile(req.user.sub, req.body);
+
+    res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      data: user,
+    });
+  }),
+
+  logout: asyncHandler(async (req, res) => {
+    logger.info({ userId: req.user.sub }, "User logged out");
+
+    res.status(200).json({
+      success: true,
+      message: "Logged out successfully",
+    });
+  }),
 });
 
 module.exports = {
