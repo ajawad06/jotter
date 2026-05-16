@@ -18,7 +18,7 @@ const authController = createAuthController(authService);
 router.post("/signup", authController.signup);
 router.post("/login", authController.login);
 router.post("/logout", authenticate, authController.logout);
-router.get("/profile", authenticate, authController.getProfile);
-router.patch("/profile", authenticate, authController.updateProfile);
+router.get("/me", authenticate, authController.getProfile);
+router.patch("/me", authenticate, authController.updateProfile);
 
 module.exports = router;

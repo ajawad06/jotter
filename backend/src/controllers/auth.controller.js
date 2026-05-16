@@ -27,7 +27,7 @@ const createAuthController = (authService) => ({
   }),
 
   getProfile: asyncHandler(async (req, res) => {
-    const user = await authService.getProfile(req.user.sub);
+    const user = await authService.getProfile(req.user.id);
 
     res.status(200).json({
       success: true,
@@ -36,7 +36,7 @@ const createAuthController = (authService) => ({
   }),
 
   updateProfile: asyncHandler(async (req, res) => {
-    const user = await authService.updateProfile(req.user.sub, req.body);
+    const user = await authService.updateProfile(req.user.id, req.body);
 
     res.status(200).json({
       success: true,
@@ -46,7 +46,7 @@ const createAuthController = (authService) => ({
   }),
 
   logout: asyncHandler(async (req, res) => {
-    logger.info({ userId: req.user.sub }, "User logged out");
+    logger.info({ userId: req.user.id }, "User logged out");
 
     res.status(200).json({
       success: true,
