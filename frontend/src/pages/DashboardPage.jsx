@@ -24,6 +24,7 @@ import {
   IconLightMode,
   IconPalette,
   IconDelete,
+  IconImport,
 } from "../components/Icons";
 
 const SIDEBAR_ITEMS = [
@@ -252,6 +253,40 @@ function DashboardPage({ token, user = null, isDarkMode, onToggleDarkMode }) {
     });
   };
 
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("text/")) {
+      setErrorMessage("Please upload a text file.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const content = e.target.result;
+      const title = file.name.replace(/\.[^/.]+$/, ""); // Name without extension
+
+      try {
+        setIsSaving(true);
+        const createdNote = await createNote(token, {
+          title,
+          content,
+          color: "#ffffff",
+        });
+        setNotes((prev) => [createdNote, ...prev]);
+        setErrorMessage("");
+      } catch (error) {
+        setErrorMessage("Failed to import note: " + error.message);
+      } finally {
+        setIsSaving(false);
+      }
+    };
+    reader.readAsText(file);
+    // Reset input so the same file can be uploaded again
+    event.target.value = null;
+  };
+
   const handleColorChange = async (noteId, color) => {
     setErrorMessage("");
 
@@ -455,14 +490,25 @@ function DashboardPage({ token, user = null, isDarkMode, onToggleDarkMode }) {
 
           <div className="notes-section-header">
             <h2>Notes</h2>
-            <button
-              type="button"
-              className="icon-btn"
-              onClick={loadNotes}
-              title="Refresh"
-            >
-              <IconRefresh />
-            </button>
+            <div className="header-actions">
+              <label className="icon-btn" title="Import Text File">
+                <IconImport />
+                <input
+                  type="file"
+                  accept=".txt,text/plain"
+                  style={{ display: "none" }}
+                  onChange={handleFileUpload}
+                />
+              </label>
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={loadNotes}
+                title="Refresh"
+              >
+                <IconRefresh />
+              </button>
+            </div>
           </div>
 
           {isLoading ? (
