@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import { useLocation, useNavigate } from "react-router-dom";
 import ReactQuill from "react-quill";
@@ -29,9 +29,10 @@ const formats = [
   "code-block",
 ];
 
-function RichTextEditorPage({ token }) {
+function RichTextEditorPage({ token, isDarkMode }) {
   const { state } = useLocation();
   const navigate = useNavigate();
+  const quillRef = useRef(null);
 
   const [noteId] = useState(state?.noteId || null);
   const [title, setTitle] = useState(state?.title || "");
@@ -52,7 +53,7 @@ function RichTextEditorPage({ token }) {
 
   const handleSave = async () => {
     setErrorMessage("");
-    
+
     // Basic validation: Check if title or content exists
     const plainText = html.replace(/<[^>]*>/g, "").trim();
     if (!title.trim() && !plainText) {
@@ -76,24 +77,41 @@ function RichTextEditorPage({ token }) {
 
       navigate("/dashboard");
     } catch (error) {
-      setErrorMessage(error.message || "Failed to save note. Please try again.");
+      setErrorMessage(
+        error.message || "Failed to save note. Please try again.",
+      );
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <section className="editor-layout">
+    <section className={`editor-layout ${isDarkMode ? "dark-mode" : ""}`}>
       <header className="editor-header">
-        <button type="button" className="text-btn back-btn" onClick={handleCancel}>
+        <button
+          type="button"
+          className="text-btn back-btn"
+          onClick={handleCancel}
+        >
           &larr; Back
         </button>
         <div className="editor-actions">
-          {errorMessage && <span className="error-text mini-error">{errorMessage}</span>}
-          <button type="button" className="text-btn cancel-btn" onClick={handleCancel}>
+          {errorMessage && (
+            <span className="error-text mini-error">{errorMessage}</span>
+          )}
+          <button
+            type="button"
+            className="text-btn cancel-btn"
+            onClick={handleCancel}
+          >
             Cancel
           </button>
-          <button type="button" className="save-btn" onClick={handleSave} disabled={isSaving}>
+          <button
+            type="button"
+            className="save-btn"
+            onClick={handleSave}
+            disabled={isSaving}
+          >
             {isSaving ? "Saving..." : "Save"}
           </button>
         </div>
@@ -108,9 +126,10 @@ function RichTextEditorPage({ token }) {
           onChange={(event) => setTitle(event.target.value)}
           autoFocus
         />
-        
+
         <div className="quill-wrapper">
           <ReactQuill
+            ref={quillRef}
             theme="snow"
             value={html}
             onChange={setHtml}
@@ -122,18 +141,27 @@ function RichTextEditorPage({ token }) {
 
         <div className="editor-footer">
           <div className="editor-colors">
-            {["#ffffff", "#f28b82", "#fbbc04", "#fff475", "#ccff90", "#a7ffeb", "#cbf0f8", "#aecbfa", "#d7aefb", "#fdcfe8"].map(
-              (swatch) => (
-                <button
-                  key={swatch}
-                  type="button"
-                  className={`color-dot ${color === swatch ? "selected" : ""}`}
-                  style={{ backgroundColor: swatch }}
-                  onClick={() => setColor(swatch)}
-                  aria-label={`Select color ${swatch}`}
-                />
-              ),
-            )}
+            {[
+              "#ffffff",
+              "#f28b82",
+              "#fbbc04",
+              "#fff475",
+              "#ccff90",
+              "#a7ffeb",
+              "#cbf0f8",
+              "#aecbfa",
+              "#d7aefb",
+              "#fdcfe8",
+            ].map((swatch) => (
+              <button
+                key={swatch}
+                type="button"
+                className={`color-dot ${color === swatch ? "selected" : ""}`}
+                style={{ backgroundColor: swatch }}
+                onClick={() => setColor(swatch)}
+                aria-label={`Select color ${swatch}`}
+              />
+            ))}
           </div>
           <span className="editor-hint">
             Changes are saved to your account.
@@ -146,7 +174,7 @@ function RichTextEditorPage({ token }) {
 
 RichTextEditorPage.propTypes = {
   token: PropTypes.string,
+  isDarkMode: PropTypes.bool,
 };
 
 export default RichTextEditorPage;
-

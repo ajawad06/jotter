@@ -12,10 +12,9 @@ import {
 
 import {
   IconNotes,
-  IconReminder,
   IconArchive,
   IconTrash,
-  IconLabel,
+  IconEdit,
   IconSearch,
   IconMenu,
   IconRefresh,
@@ -29,8 +28,6 @@ import {
 
 const SIDEBAR_ITEMS = [
   { key: "notes", icon: <IconNotes />, label: "Notes" },
-  { key: "reminders", icon: <IconReminder />, label: "Reminders" },
-  { key: "labels", icon: <IconLabel />, label: "Edit Labels" },
   { key: "archive", icon: <IconArchive />, label: "Archive" },
   { key: "trash", icon: <IconTrash />, label: "Trash" },
 ];
@@ -67,13 +64,12 @@ const parseChecklist = (content) => {
   }));
 };
 
-function DashboardPage({ token, user = null, onLogout }) {
+function DashboardPage({ token, user = null, isDarkMode, onToggleDarkMode }) {
   const [notes, setNotes] = useState([]);
   const [searchText, setSearchText] = useState("");
   const [activeSidebarItem, setActiveSidebarItem] = useState("notes");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isGridView, setIsGridView] = useState(true);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -343,7 +339,7 @@ function DashboardPage({ token, user = null, onLogout }) {
           <button
             type="button"
             className="icon-btn"
-            onClick={() => setIsDarkMode((prev) => !prev)}
+            onClick={onToggleDarkMode}
             aria-label="Toggle dark mode"
           >
             {isDarkMode ? <IconLightMode /> : <IconDarkMode />}
@@ -351,11 +347,20 @@ function DashboardPage({ token, user = null, onLogout }) {
           <button
             type="button"
             className="avatar-btn"
-            onClick={onLogout}
-            title="Logout"
-            aria-label="Logout"
+            onClick={() => navigate("/profile")}
+            title="Profile"
+            aria-label="Profile"
+            style={{
+              backgroundColor: user?.profileColor || "#0f766e",
+              backgroundImage: user?.profileImage
+                ? `url(${user.profileImage})`
+                : "none",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
           >
-            {(user?.name || user?.email || "U").charAt(0).toUpperCase()}
+            {!user?.profileImage &&
+              (user?.name || user?.email || "U").charAt(0).toUpperCase()}
           </button>
         </div>
       </header>
@@ -509,50 +514,63 @@ function DashboardPage({ token, user = null, onLogout }) {
                     )}
 
                     <div className="keep-card-toolbar">
-                      <button
-                        type="button"
-                        className="icon-btn"
-                        onClick={() => handleStartEdit(note)}
-                        title="Edit"
-                      >
-                        <IconLabel />
-                      </button>
-                      <button
-                        type="button"
-                        className="icon-btn"
-                        onClick={() => handleDelete(note.id)}
-                        title="Delete Permanently"
-                      >
-                        <IconDelete />
-                      </button>
-                      <div className="inline-palette">
-                        {NOTE_COLORS.map((color) => (
+                      <div className="note-card-actions">
+                        <button
+                          type="button"
+                          className="icon-btn"
+                          onClick={() => handleStartEdit(note)}
+                          title="Edit"
+                        >
+                          <IconEdit />
+                        </button>
+                        <div className="palette-container">
                           <button
-                            key={`${note.id}-${color}`}
                             type="button"
-                            className="mini-color-dot"
-                            style={{ background: color }}
-                            onClick={() => handleColorChange(note.id, color)}
-                            aria-label={`Change note color ${color}`}
-                          />
-                        ))}
+                            className="icon-btn"
+                            title="Change Color"
+                          >
+                            <IconPalette />
+                          </button>
+                          <div className="inline-palette">
+                            {NOTE_COLORS.map((color) => (
+                              <button
+                                key={`${note.id}-${color}`}
+                                type="button"
+                                className="mini-color-dot"
+                                style={{ background: color }}
+                                onClick={() =>
+                                  handleColorChange(note.id, color)
+                                }
+                                aria-label={`Change note color ${color}`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="icon-btn"
+                          onClick={() => handleToggleField(note, "isArchived")}
+                          title="Archive"
+                        >
+                          <IconArchive />
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-btn"
+                          onClick={() => handleToggleField(note, "isTrashed")}
+                          title={note.isTrashed ? "Restore" : "Move to Trash"}
+                        >
+                          {note.isTrashed ? <IconRefresh /> : <IconTrash />}
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-btn"
+                          onClick={() => handleDelete(note.id)}
+                          title="Delete Permanently"
+                        >
+                          <IconDelete />
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        className="icon-btn"
-                        onClick={() => handleToggleField(note, "isArchived")}
-                        title="Archive"
-                      >
-                        <IconArchive />
-                      </button>
-                      <button
-                        type="button"
-                        className="icon-btn"
-                        onClick={() => handleToggleField(note, "isTrashed")}
-                        title={note.isTrashed ? "Restore" : "Move to Trash"}
-                      >
-                        {note.isTrashed ? <IconRefresh /> : <IconTrash />}
-                      </button>
                     </div>
                   </article>
                 );
@@ -571,7 +589,8 @@ DashboardPage.propTypes = {
     name: PropTypes.string,
     email: PropTypes.string,
   }),
-  onLogout: PropTypes.func.isRequired,
+  isDarkMode: PropTypes.bool.isRequired,
+  onToggleDarkMode: PropTypes.func.isRequired,
 };
 
 export default DashboardPage;

@@ -90,6 +90,10 @@ describe("App", () => {
       </MemoryRouter>,
     );
 
+    // Profile page navigation
+    await user.click(screen.getByRole("button", { name: "Profile" }));
+
+    // Now click Logout on ProfilePage
     await user.click(screen.getByRole("button", { name: "Logout" }));
 
     expect(

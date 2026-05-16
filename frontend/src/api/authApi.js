@@ -14,6 +14,9 @@ const parseApiResponse = async (response) => {
         };
 
   if (!response.ok) {
+    if (response.status === 401) {
+      window.dispatchEvent(new CustomEvent("unauthorized"));
+    }
     throw new Error(data.message || "Request failed");
   }
 
@@ -44,4 +47,38 @@ const login = async (payload) => {
   return parseApiResponse(response);
 };
 
-export { login, signup };
+const logout = async (token) => {
+  const response = await fetch(`${API_BASE_URL}/logout`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return parseApiResponse(response);
+};
+
+const getProfile = async (token) => {
+  const response = await fetch(`${API_BASE_URL}/me`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return parseApiResponse(response);
+};
+
+const updateProfile = async (token, payload) => {
+  const response = await fetch(`${API_BASE_URL}/me`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  return parseApiResponse(response);
+};
+
+export { getProfile, login, logout, signup, updateProfile };
