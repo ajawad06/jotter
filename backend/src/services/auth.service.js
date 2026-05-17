@@ -16,11 +16,24 @@ const createAuthService = ({ userRepository, jwtConfig }) => ({
       throw new AppError("Email is already registered", 409);
     }
 
+    const GOOGLE_COLORS = [
+      "#1a73e8",
+      "#d93025",
+      "#f9ab00",
+      "#188038",
+      "#af5cf7",
+      "#00acc1",
+      "#ff6d00",
+    ];
+    const profileColor =
+      GOOGLE_COLORS[Math.floor(Math.random() * GOOGLE_COLORS.length)];
+
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await userRepository.createUser({
       name: name.trim(),
       email: normalizedEmail,
       passwordHash,
+      profileColor,
     });
 
     const token = jwt.sign(
@@ -33,7 +46,13 @@ const createAuthService = ({ userRepository, jwtConfig }) => ({
     );
 
     return {
-      user,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        profileImage: user.profileImage,
+        profileColor: user.profileColor,
+      },
       token,
     };
   },
@@ -70,9 +89,27 @@ const createAuthService = ({ userRepository, jwtConfig }) => ({
         id: user.id,
         name: user.name,
         email: user.email,
+        profileImage: user.profileImage,
+        profileColor: user.profileColor,
       },
       token,
     };
+  },
+
+  async getProfile(userId) {
+    const user = await userRepository.findById(userId);
+    if (!user) {
+      throw new AppError("User not found", 404);
+    }
+    return user;
+  },
+
+  async updateProfile(userId, updateData) {
+    const user = await userRepository.updateUser(userId, updateData);
+    if (!user) {
+      throw new AppError("User not found", 404);
+    }
+    return user;
   },
 });
 
