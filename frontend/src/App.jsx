@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import ProtectedRoute from "./components/ProtectedRoute";
-import { login, signup } from "./api/authApi";
+import { login, logout, signup } from "./api/authApi";
 import DashboardPage from "./pages/DashboardPage";
 import LoginPage from "./pages/LoginPage";
+import ProfilePage from "./pages/ProfilePage";
 import RichTextEditorPage from "./pages/RichTextEditorPage";
 import SignupPage from "./pages/SignupPage";
 import {
@@ -19,7 +20,41 @@ function App() {
     token: getToken(),
     user: getUser(),
   }));
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    return localStorage.getItem("darkMode") === "true";
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem("darkMode", isDarkMode);
+    if (isDarkMode) {
+      document.body.classList.add("dark-mode");
+    } else {
+      document.body.classList.remove("dark-mode");
+    }
+  }, [isDarkMode]);
+
+  const handleLogout = useCallback(async () => {
+    try {
+      if (session.token) {
+        await logout(session.token);
+      }
+    } catch {
+      // Ignore logout errors, still clear session
+    } finally {
+      clearSession();
+      setSession({ token: null, user: null });
+    }
+  }, [session.token]);
+
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      handleLogout();
+    };
+
+    window.addEventListener("unauthorized", handleUnauthorized);
+    return () => window.removeEventListener("unauthorized", handleUnauthorized);
+  }, [handleLogout]);
 
   const isAuthenticated = Boolean(session.token);
 
@@ -45,9 +80,15 @@ function App() {
     }
   };
 
-  const handleLogout = () => {
-    clearSession();
-    setSession({ token: null, user: null });
+  const handleUpdateSessionUser = (updatedUser) => {
+    setSession((prev) => {
+      const newSession = {
+        ...prev,
+        user: { ...prev.user, ...updatedUser },
+      };
+      saveSession(newSession);
+      return newSession;
+    });
   };
 
   return (
@@ -87,6 +128,22 @@ function App() {
                 token={session.token}
                 user={session.user}
                 onLogout={handleLogout}
+                isDarkMode={isDarkMode}
+                onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
+              />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <ProfilePage
+                token={session.token}
+                user={session.user}
+                onLogout={handleLogout}
+                onUpdateUser={handleUpdateSessionUser}
+                isDarkMode={isDarkMode}
               />
             </ProtectedRoute>
           }
@@ -95,7 +152,10 @@ function App() {
           path="/editor"
           element={
             <ProtectedRoute isAuthenticated={isAuthenticated}>
-              <RichTextEditorPage token={session.token} />
+              <RichTextEditorPage
+                token={session.token}
+                isDarkMode={isDarkMode}
+              />
             </ProtectedRoute>
           }
         />
