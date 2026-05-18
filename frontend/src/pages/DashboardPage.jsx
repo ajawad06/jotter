@@ -24,6 +24,7 @@ import {
   IconLightMode,
   IconPalette,
   IconDelete,
+  IconImport,
 } from "../components/Icons";
 
 const SIDEBAR_ITEMS = [
@@ -81,6 +82,7 @@ function DashboardPage({ token, user = null, isDarkMode, onToggleDarkMode }) {
     color: "#ffffff",
   });
   const composerRef = useRef(null);
+  const fileInputRef = useRef(null);
   const navigate = useNavigate();
 
   const isEditMode = useMemo(() => isEditingId !== null, [isEditingId]);
@@ -298,6 +300,53 @@ function DashboardPage({ token, user = null, isDarkMode, onToggleDarkMode }) {
     }
   };
 
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileImport = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.match("text.*") && !file.name.endsWith(".txt")) {
+      setErrorMessage("Please select a text file (.txt)");
+      return;
+    }
+
+    setErrorMessage("");
+    setIsLoading(true);
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const content = e.target.result;
+      const title = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
+
+      try {
+        const createdNote = await createNote(token, {
+          title,
+          content,
+          color: "#ffffff",
+        });
+        setNotes((prev) => [createdNote, ...prev]);
+        setActiveSidebarItem("notes"); // Switch to notes view to see the imported note
+      } catch (error) {
+        setErrorMessage("Failed to import note: " + error.message);
+      } finally {
+        setIsLoading(false);
+        event.target.value = ""; // Reset input
+      }
+    };
+
+    reader.onerror = () => {
+      setErrorMessage("Error reading file");
+      setIsLoading(false);
+    };
+
+    reader.readAsText(file);
+  };
+
   return (
     <section className={`keep-layout ${isDarkMode ? "dark-mode" : ""}`}>
       <header className="keep-header">
@@ -328,6 +377,22 @@ function DashboardPage({ token, user = null, isDarkMode, onToggleDarkMode }) {
         </div>
 
         <div className="keep-actions">
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={handleImportClick}
+            aria-label="Import text file"
+            title="Import text file"
+          >
+            <IconImport />
+          </button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            style={{ display: "none" }}
+            accept=".txt,text/plain"
+            onChange={handleFileImport}
+          />
           <button
             type="button"
             className="icon-btn"
