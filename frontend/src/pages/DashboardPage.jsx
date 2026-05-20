@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
+import { jsPDF } from "jspdf";
 
 import {
   createNote,
@@ -25,6 +26,7 @@ import {
   IconPalette,
   IconDelete,
   IconImport,
+  IconExport,
 } from "../components/Icons";
 
 const SIDEBAR_ITEMS = [
@@ -63,6 +65,35 @@ const parseChecklist = (content) => {
     text: line.replace(/^- \[[x ]\]\s*/i, ""),
     checked: line.startsWith("- [x]"),
   }));
+};
+
+const formatContentForExport = (html) => {
+  if (!html) return "";
+  let text = html;
+  // Replace headings with spacing
+  text = text.replace(/<h[1-6][^>]*>/gi, "\n\n");
+  text = text.replace(/<\/h[1-6]>/gi, "\n");
+  // Replace list items with bullets
+  text = text.replace(/<li[^>]*>/gi, "\n• ");
+  text = text.replace(/<\/li>/gi, "");
+  // Replace paragraphs and breaks with newlines
+  text = text.replace(/<(p|div|br)[^>]*>/gi, "\n");
+  // Strip all other HTML tags
+  text = text.replace(/<[^>]+>/g, "");
+  // Decode HTML entities
+  const entities = {
+    "&nbsp;": " ",
+    "&amp;": "&",
+    "&lt;": "<",
+    "&gt;": ">",
+    "&quot;": '"',
+    "&#39;": "'",
+  };
+  Object.keys(entities).forEach((entity) => {
+    text = text.replace(new RegExp(entity, "g"), entities[entity]);
+  });
+  // Clean up whitespace
+  return text.trim().replace(/\n{3,}/g, "\n\n");
 };
 
 function DashboardPage({ token, user = null, isDarkMode, onToggleDarkMode }) {
@@ -150,14 +181,14 @@ function DashboardPage({ token, user = null, isDarkMode, onToggleDarkMode }) {
     }
 
     const title = formValues.title.trim();
-    const content = formValues.content.trim();
+    const content = formValues.content;
 
-    if (!title && !content) {
+    if (!title && !content.trim()) {
       resetForm();
       return;
     }
 
-    if (!content) {
+    if (!content.trim()) {
       setErrorMessage("Content is required");
       return;
     }
@@ -168,7 +199,7 @@ function DashboardPage({ token, user = null, isDarkMode, onToggleDarkMode }) {
     try {
       const createdNote = await createNote(token, {
         title: title || "Untitled",
-        content,
+        content: content.trim(),
         color: formValues.color,
       });
       setNotes((prev) => [createdNote, ...prev]);
@@ -204,7 +235,11 @@ function DashboardPage({ token, user = null, isDarkMode, onToggleDarkMode }) {
 
     try {
       if (isEditMode) {
-        const updatedNote = await updateNote(token, isEditingId, formValues);
+        const updatedNote = await updateNote(token, isEditingId, {
+          ...formValues,
+          title: formValues.title.trim(),
+          content: formValues.content.trim(),
+        });
         setNotes((prev) =>
           prev.map((note) => (note.id === isEditingId ? updatedNote : note)),
         );
@@ -212,7 +247,7 @@ function DashboardPage({ token, user = null, isDarkMode, onToggleDarkMode }) {
       } else {
         const createdNote = await createNote(token, {
           title: formValues.title.trim() || "Untitled",
-          content: formValues.content,
+          content: formValues.content.trim(),
           color: formValues.color,
         });
         setNotes((prev) => [createdNote, ...prev]);
@@ -345,6 +380,31 @@ function DashboardPage({ token, user = null, isDarkMode, onToggleDarkMode }) {
     };
 
     reader.readAsText(file);
+  };
+
+  const handleExportNote = (note, format = "txt") => {
+    const formattedContent = formatContentForExport(note.content);
+    const filename = `${note.title.replace(/\s+/g, "_") || "Note"}.${format}`;
+
+    if (format === "txt") {
+      const element = document.createElement("a");
+      const file = new Blob([note.title + "\n\n" + formattedContent], {
+        type: "text/plain",
+      });
+      element.href = URL.createObjectURL(file);
+      element.download = filename;
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
+    } else if (format === "pdf") {
+      const doc = new jsPDF();
+      doc.setFontSize(18);
+      doc.text(note.title || "Untitled Note", 10, 20);
+      doc.setFontSize(12);
+      const splitText = doc.splitTextToSize(formattedContent, 180);
+      doc.text(splitText, 10, 30);
+      doc.save(filename);
+    }
   };
 
   return (
@@ -635,6 +695,31 @@ function DashboardPage({ token, user = null, isDarkMode, onToggleDarkMode }) {
                         >
                           <IconDelete />
                         </button>
+                        <div className="palette-container">
+                          <button
+                            type="button"
+                            className="icon-btn"
+                            title="Export"
+                          >
+                            <IconExport />
+                          </button>
+                          <div className="inline-palette export-options">
+                            <button
+                              type="button"
+                              className="export-opt-btn"
+                              onClick={() => handleExportNote(note, "txt")}
+                            >
+                              TXT
+                            </button>
+                            <button
+                              type="button"
+                              className="export-opt-btn"
+                              onClick={() => handleExportNote(note, "pdf")}
+                            >
+                              PDF
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </article>
