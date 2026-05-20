@@ -55,7 +55,8 @@ function RichTextEditorPage({ token, isDarkMode }) {
     setErrorMessage("");
 
     // Basic validation: Check if title or content exists
-    const plainText = html.replace(/<[^>]*>/g, "").trim();
+    const trimmedHtml = html.trim();
+    const plainText = trimmedHtml.replace(/<[^>]*>/g, "").trim();
     if (!title.trim() && !plainText) {
       setErrorMessage("Please provide a title or some content for your note.");
       return;
@@ -65,7 +66,7 @@ function RichTextEditorPage({ token, isDarkMode }) {
     try {
       const payload = {
         title: title.trim() || "Untitled",
-        content: html,
+        content: trimmedHtml,
         color,
       };
 

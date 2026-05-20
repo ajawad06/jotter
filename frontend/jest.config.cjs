@@ -8,6 +8,9 @@ module.exports = {
   moduleNameMapper: {
     "\\.(css|less|scss|sass)$": "identity-obj-proxy",
   },
+  transformIgnorePatterns: [
+    "/node_modules/(?!(jspdf|canvg|html2canvas|dompurify)/)",
+  ],
   testMatch: ["**/?(*.)+(test).[jt]s?(x)"],
   collectCoverageFrom: ["src/**/*.{js,jsx}", "!src/main.jsx"],
 };

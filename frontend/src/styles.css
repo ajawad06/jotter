@@ -202,14 +202,17 @@ body {
 .profile-actions-grid {
   display: flex;
   gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .profile-action-btn {
   flex: 1;
+  min-width: 140px;
   padding: 0.75rem;
   border: 1px solid #dadce0;
   border-radius: 8px;
   background: white;
+  color: #3c4043;
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: 500;
@@ -293,6 +296,42 @@ body {
 .dark-mode .profile-card {
   background-color: #2d2e30;
   border-color: #5f6368;
+}
+
+.dark-mode .profile-action-btn:hover {
+  background: #3c4043;
+}
+
+.dark-mode .export-opt-btn {
+  color: #e8eaed;
+}
+
+.export-options {
+  padding: 8px !important;
+  display: flex !important;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.export-opt-btn {
+  background: transparent;
+  border: none;
+  padding: 4px 12px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-align: left;
+  border-radius: 4px;
+  color: #3c4043;
+  width: 100%;
+}
+
+.export-opt-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.dark-mode .export-opt-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .dark-mode .profile-hero h2 {
