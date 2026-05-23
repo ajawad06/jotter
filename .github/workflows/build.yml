@@ -1,4 +1,4 @@
-name: Build and SonarCloud Analysis
+name: Build
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  sonar:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -34,8 +34,3 @@ jobs:
 
       - name: Build frontend
         run: npm run build -w frontend
-
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@v5
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

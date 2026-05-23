@@ -5,6 +5,7 @@ node_modules/
 !**/.env.example
 coverage/
 .nyc_output/
+.scannerwork/
 dist/
 build/
 .DS_Store
