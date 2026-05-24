@@ -1,14 +1,20 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import DashboardPage from "./DashboardPage";
-import { listNotes, createNote } from "../api/noteApi";
+import {
+  createNote,
+  deleteNote,
+  listNotes,
+  updateNote,
+  updateNoteAppearance,
+} from "../api/noteApi";
 
 // Mock the API calls
 jest.mock("../api/noteApi");
 
 const mockNotes = [
   {
-    _id: "1",
+    id: "1",
     title: "Test Note 1",
     content: "Content 1",
     color: "#ffffff",
@@ -17,7 +23,7 @@ const mockNotes = [
     updatedAt: new Date().toISOString(),
   },
   {
-    _id: "2",
+    id: "2",
     title: "Archived Note",
     content: "Content 2",
     color: "#ffffff",
@@ -92,7 +98,7 @@ describe("DashboardPage", () => {
 
   test("creates a new note", async () => {
     createNote.mockResolvedValue({
-      _id: "3",
+      id: "3",
       title: "New Note",
       content: "New Content",
       color: "#ffffff",
@@ -125,5 +131,80 @@ describe("DashboardPage", () => {
     fireEvent.click(toggleViewBtn);
     // Success means no error thrown and button exists
     expect(toggleViewBtn).toBeInTheDocument();
+  });
+
+  test("shows an error when loading notes fails", async () => {
+    listNotes.mockRejectedValue(new Error("Could not load notes"));
+
+    renderDashboard();
+
+    expect(await screen.findByText("Could not load notes")).toBeInTheDocument();
+  });
+
+  test("updates note color and archive state", async () => {
+    updateNoteAppearance.mockResolvedValue({
+      ...mockNotes[0],
+      color: "#f28b82",
+    });
+
+    renderDashboard();
+
+    await screen.findByText("Test Note 1");
+
+    fireEvent.click(screen.getAllByLabelText("Change note color #f28b82")[0]);
+
+    await waitFor(() => {
+      expect(updateNoteAppearance).toHaveBeenCalledWith("mock-token", "1", {
+        color: "#f28b82",
+      });
+    });
+
+    updateNoteAppearance.mockResolvedValue({
+      ...mockNotes[0],
+      isArchived: true,
+    });
+    fireEvent.click(screen.getAllByTitle("Archive")[0]);
+
+    await waitFor(() => {
+      expect(updateNoteAppearance).toHaveBeenCalledWith("mock-token", "1", {
+        isArchived: true,
+      });
+    });
+  });
+
+  test("edits and deletes a note", async () => {
+    updateNote.mockResolvedValue({
+      ...mockNotes[0],
+      title: "Edited Note",
+      content: "Edited Content",
+    });
+    deleteNote.mockResolvedValue();
+
+    renderDashboard();
+
+    await screen.findByText("Test Note 1");
+
+    fireEvent.click(screen.getAllByTitle("Edit")[0]);
+    fireEvent.change(screen.getByPlaceholderText(/Title/i), {
+      target: { value: "Edited Note" },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/Take a note/i), {
+      target: { value: "Edited Content" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Update/i }));
+
+    await waitFor(() => {
+      expect(updateNote).toHaveBeenCalledWith("mock-token", "1", {
+        title: "Edited Note",
+        content: "Edited Content",
+        color: "#ffffff",
+      });
+    });
+
+    fireEvent.click(screen.getAllByTitle("Delete Permanently")[0]);
+
+    await waitFor(() => {
+      expect(deleteNote).toHaveBeenCalledWith("mock-token", "1");
+    });
   });
 });

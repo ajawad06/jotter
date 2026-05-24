@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "test": "mocha --require test/setup.js \"test/**/*.spec.js\"",
+    "test": "nyc --reporter=lcov --reporter=text mocha --require test/setup.js \"test/**/*.spec.js\"",
     "lint": "eslint ."
   },
   "dependencies": {
@@ -21,12 +21,13 @@
     "pino-http": "^10.3.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.10.0",
     "chai": "^4.5.0",
     "eslint": "^9.10.0",
-    "@eslint/js": "^9.10.0",
     "globals": "^15.9.0",
     "mocha": "^10.7.3",
     "nodemon": "^3.1.4",
+    "nyc": "^18.0.0",
     "supertest": "^7.0.0"
   }
 }
