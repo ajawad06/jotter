@@ -1,39 +1,41 @@
 # Notes App
 
-Day 1 bootstrap for a full-stack Notes App internship project.
+A full-stack Google Keep clone built for organized note-taking. Features rich text support, category-based styling, and various export options.
 
-## Tech stack
+## 🚀 Key Features
 
-- Backend: Node.js (Express)
-- Frontend: React
-- Database: MySQL
-- Logging: Pino
-- Backend testing: Mocha + Chai
-- Frontend testing: Jest + Testing Library
-- Quality: SonarQube
+- **Auth & Profiles**: Secure user accounts with customizable display names and theme preferences.
+- **Note Management**:
+  - Create, Pin, Archive, and Trash notes.
+  - Apply colors to categorize different types of notes.
+- **Rich Editor**: Integrated editor for formatting text (bold, italic, lists, etc.).
+- **Import/Export**: Load from `.txt` files and export your notes as indexed `.txt` or `.pdf`.
+- **Responsive UI**: A modern interface that works across devices, featuring both List and Grid views.
 
-## Project structure
+## 🛠️ Tech Stack
 
-- `backend/` - API, middleware, logging, database setup
-- `frontend/` - React app baseline and tests
+- **Frontend**: React 18, React Router, Vite, React Quill, jsPDF.
+- **Backend**: Node.js, Express, MongoDB (Mongoose), JWT Auth.
+- **Development**: ESLint for code quality, SonarCloud for static analysis.
 
-## Quick start
+## 📥 Setup & Running
 
-1. Install all dependencies:
-   - `npm run install:all`
-2. Start backend:
-   - `npm run dev:backend`
-3. Start frontend:
-   - `npm run dev:frontend`
-4. Run all tests:
-   - `npm test`
+1. **Install everything**:
 
-## Day 1 scope
+   ```bash
+   npm run install:all
+   ```
 
-- Monorepo scaffold
-- Backend health endpoint
-- Global error middleware
-- Pino and HTTP request logging
-- MySQL connection module
-- Frontend baseline screen
-- CI and SonarQube starter config
+2. **Configure environment**:
+   Create a `backend/.env` with your `PORT`, `MONGODB_URI`, and `JWT_SECRET`.
+
+3. **Start the app**:
+   - Backend: `npm run dev:backend`
+   - Frontend: `npm run dev:frontend`
+
+## 🧪 Testing
+
+I used **Jest/RTL** for the frontend and **Mocha/Chai** for the backend to ensure stability.
+
+- Run all tests: `npm test`
+- Check coverage: `npm run test:coverage -w backend` (or `-w frontend`)
