@@ -1,0 +1,23 @@
+{
+  "name": "notes-app",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "install:all": "npm install --workspaces",
+    "dev:backend": "npm run dev -w backend",
+    "dev:frontend": "npm run dev -w frontend",
+    "test": "npm run test -w backend && npm run test -w frontend",
+    "lint": "npm run lint -w backend && npm run lint -w frontend",
+    "sonar:up": "docker compose -f docker-compose.sonar.yml up -d sonarqube",
+    "sonar:down": "docker compose -f docker-compose.sonar.yml down",
+    "sonar:logs": "docker compose -f docker-compose.sonar.yml logs -f sonarqube",
+    "sonar:scan": "docker compose -f docker-compose.sonar.yml run --rm sonar-scanner",
+    "sonar:scan:branch": "node scripts/sonar-scan-branch.mjs",
+    "sonar:local": "npm run lint && npm test && npm run build -w frontend && npm run sonar:scan",
+    "sonar:local:branch": "npm run lint && npm test && npm run build -w frontend && npm run sonar:scan:branch"
+  }
+}
