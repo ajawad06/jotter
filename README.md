@@ -1,4 +1,4 @@
-# Notes Tracker
+# Jotter - Smart Note Taking
 
 A feature-rich, full-stack notes management application inspired by Google Keep. This project focuses on high code quality, comprehensive testing, and modern development practices, featuring a React-based frontend and a robust Node.js/Express backend.
 
