@@ -53,6 +53,63 @@ const createAuthController = (authService) => ({
       message: "Logged out successfully",
     });
   }),
+
+  verifyEmail: asyncHandler(async (req, res) => {
+    const result = await authService.verifyEmail(req.body?.token);
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+    });
+  }),
+
+  resendVerification: asyncHandler(async (req, res) => {
+    const result = await authService.resendVerification(req.user.id);
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+    });
+  }),
+
+  forgotPassword: asyncHandler(async (req, res) => {
+    const result = await authService.forgotPassword(req.body?.email);
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+    });
+  }),
+
+  resetPassword: asyncHandler(async (req, res) => {
+    const result = await authService.resetPassword(
+      req.body?.token,
+      req.body?.password,
+    );
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+    });
+  }),
+
+  changePassword: asyncHandler(async (req, res) => {
+    const result = await authService.changePassword(req.user.id, req.body);
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+    });
+  }),
+
+  deleteAccount: asyncHandler(async (req, res) => {
+    const result = await authService.deleteAccount(req.user.id);
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+    });
+  }),
 });
 
 module.exports = {

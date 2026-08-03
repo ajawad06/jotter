@@ -1,11 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
-import { jsPDF } from "jspdf";
-import { updateProfile } from "../api/authApi";
+import {
+  changePassword,
+  deleteAccount,
+  resendVerification,
+  updateProfile,
+} from "../api/authApi";
 import { listNotes } from "../api/noteApi";
+import { IconCheck } from "../components/Icons";
 
-const GOOGLE_COLORS = [
+const JOTTER_PROFILE_COLORS = [
   "#1a73e8",
   "#d93025",
   "#f9ab00",
@@ -15,40 +20,58 @@ const GOOGLE_COLORS = [
   "#ff6d00",
 ];
 
-const formatContentForExport = (html) => {
-  if (!html) return "";
-  let text = html;
-  // Replace headings with spacing
-  text = text.replace(/<h[1-6][^>]*>/gi, "\n\n");
-  text = text.replace(/<\/h[1-6]>/gi, "\n");
-  // Replace list items with bullets
-  text = text.replace(/<li[^>]*>/gi, "\n• ");
-  text = text.replace(/<\/li>/gi, "");
-  // Replace paragraphs and breaks with newlines
-  text = text.replace(/<(p|div|br)[^>]*>/gi, "\n");
-  // Strip all other HTML tags
-  text = text.replace(/<[^>]+>/g, "");
-  // Decode HTML entities
-  const entities = {
-    "&nbsp;": " ",
-    "&amp;": "&",
-    "&lt;": "<",
-    "&gt;": ">",
-    "&quot;": '"',
-    "&#39;": "'",
-  };
-  Object.keys(entities).forEach((entity) => {
-    text = text.replace(new RegExp(entity, "g"), entities[entity]);
-  });
-  // Clean up whitespace
-  return text.trim().replace(/\n{3,}/g, "\n\n");
+const EMPTY_PASSWORD_FORM = {
+  currentPassword: "",
+  newPassword: "",
+  confirmPassword: "",
 };
 
-function ProfilePage({ user, token, onLogout, onUpdateUser, isDarkMode }) {
+function ProfilePage({ user, token, onUpdateUser, onLogout, isDarkMode }) {
   const navigate = useNavigate();
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState("");
   const [name, setName] = useState(user?.name || "");
+
+  const [stats, setStats] = useState(null);
+
+  const [passwordForm, setPasswordForm] = useState(EMPTY_PASSWORD_FORM);
+  const [passwordMessage, setPasswordMessage] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  const [verificationMessage, setVerificationMessage] = useState("");
+  const [isResending, setIsResending] = useState(false);
+
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    listNotes(token)
+      .then((notes) => {
+        if (!isMounted) return;
+        const activeNotes = notes.filter((note) => !note.isTrashed);
+        const labels = new Set();
+        notes.forEach((note) =>
+          (note.labels || []).forEach((label) => labels.add(label)),
+        );
+        setStats({
+          total: activeNotes.length,
+          pinned: activeNotes.filter((note) => note.isPinned).length,
+          archived: activeNotes.filter((note) => note.isArchived).length,
+          labels: labels.size,
+        });
+      })
+      .catch(() => {
+        if (isMounted) setStats({ total: 0, pinned: 0, archived: 0, labels: 0 });
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [token]);
 
   const handleUpdateName = async () => {
     setError("");
@@ -56,7 +79,6 @@ function ProfilePage({ user, token, onLogout, onUpdateUser, isDarkMode }) {
     try {
       const updatedUser = await updateProfile(token, { name });
       onUpdateUser(updatedUser);
-      alert("Profile name updated!");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -79,7 +101,7 @@ function ProfilePage({ user, token, onLogout, onUpdateUser, isDarkMode }) {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      alert("File is too large. Max 5MB.");
+      setError("Image is too large. Max 5MB.");
       return;
     }
 
@@ -88,9 +110,8 @@ function ProfilePage({ user, token, onLogout, onUpdateUser, isDarkMode }) {
       setError("");
       setIsUpdating(true);
       try {
-        const base64Image = reader.result;
         const updatedUser = await updateProfile(token, {
-          profileImage: base64Image,
+          profileImage: reader.result,
         });
         onUpdateUser(updatedUser);
       } catch (err) {
@@ -115,71 +136,82 @@ function ProfilePage({ user, token, onLogout, onUpdateUser, isDarkMode }) {
     }
   };
 
-  const handleExportAll = async (format = "txt") => {
-    setError("");
-    setIsUpdating(true);
+  const handleResendVerification = async () => {
+    setVerificationMessage("");
+    setIsResending(true);
     try {
-      const notes = await listNotes(token);
-      if (notes.length === 0) {
-        alert("No notes to export.");
-        return;
-      }
-
-      const filename = `Keep_Export_${new Date().toISOString().split("T")[0]}.${format}`;
-
-      if (format === "txt") {
-        const fullContent = notes
-          .map((n) => {
-            const formattedContent = formatContentForExport(n.content);
-            return `TITLE: ${n.title}\nCONTENT: ${formattedContent}\n------------------\n`;
-          })
-          .join("\n");
-
-        const element = document.createElement("a");
-        const file = new Blob([fullContent], { type: "text/plain" });
-        element.href = URL.createObjectURL(file);
-        element.download = filename;
-        document.body.appendChild(element);
-        element.click();
-        document.body.removeChild(element);
-      } else if (format === "pdf") {
-        const doc = new jsPDF();
-        let yPos = 20;
-
-        notes.forEach((n, index) => {
-          if (index > 0) {
-            doc.addPage();
-            yPos = 20;
-          }
-          const formattedContent = formatContentForExport(n.content);
-          doc.setFontSize(16);
-          doc.text(n.title || "Untitled", 10, yPos);
-          doc.setFontSize(10);
-          const splitText = doc.splitTextToSize(formattedContent, 180);
-          doc.text(splitText, 10, yPos + 10);
-        });
-        doc.save(filename);
-      }
+      await resendVerification(token);
+      setVerificationMessage("Verification email sent. Check your inbox.");
     } catch (err) {
-      setError("Export failed: " + err.message);
+      setVerificationMessage(err.message);
     } finally {
-      setIsUpdating(false);
+      setIsResending(false);
+    }
+  };
+
+  const handleChangePassword = async (event) => {
+    event.preventDefault();
+    setPasswordMessage("");
+    setPasswordError("");
+
+    if (passwordForm.newPassword.length < 6) {
+      setPasswordError("New password must be at least 6 characters.");
+      return;
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError("New passwords do not match.");
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      await changePassword(
+        token,
+        passwordForm.currentPassword,
+        passwordForm.newPassword,
+      );
+      setPasswordMessage("Password changed successfully.");
+      setPasswordForm(EMPTY_PASSWORD_FORM);
+    } catch (err) {
+      setPasswordError(err.message);
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setError("");
+    setIsDeleting(true);
+    try {
+      await deleteAccount(token);
+      onLogout?.();
+    } catch (err) {
+      setError(err.message);
+      setIsDeleting(false);
     }
   };
 
   const initials = (user?.name || user?.email || "U").charAt(0).toUpperCase();
+  const isVerified = user?.isEmailVerified;
 
   return (
     <div className={`profile-container ${isDarkMode ? "dark-mode" : ""}`}>
-      <header className="keep-header">
+      <header className="jotter-header">
         <div
-          className="keep-brand"
+          className="jotter-brand"
           onClick={() => navigate("/dashboard")}
           style={{ cursor: "pointer" }}
         >
-          <span className="keep-logo">💡</span>
-          <span className="keep-title">Keep</span>
+          <img className="jotter-logo" src="/jotter-logo.png" alt="" />
+          <span className="jotter-title">Jotter</span>
         </div>
+        <button
+          type="button"
+          className="profile-back-btn"
+          onClick={() => navigate("/dashboard")}
+        >
+          Back to Notes
+        </button>
       </header>
 
       <div className="profile-card-wrapper">
@@ -198,14 +230,45 @@ function ProfilePage({ user, token, onLogout, onUpdateUser, isDarkMode }) {
             >
               {!user?.profileImage && initials}
             </div>
-            <h2>{user?.name}</h2>
-            <p className="profile-email">{user?.email}</p>
+            <div className="profile-hero-info">
+              <h2>{user?.name}</h2>
+              <p className="profile-email">{user?.email}</p>
+              <span
+                className={`verify-badge ${
+                  isVerified ? "verified" : "unverified"
+                }`}
+              >
+                {isVerified && <IconCheck />}
+                {isVerified ? "Email verified" : "Email not verified"}
+              </span>
+            </div>
           </div>
 
+          <div className="profile-stats">
+            <div className="stat-tile">
+              <span className="stat-value">{stats ? stats.total : "—"}</span>
+              <span className="stat-label">Notes</span>
+            </div>
+            <div className="stat-tile">
+              <span className="stat-value">{stats ? stats.pinned : "—"}</span>
+              <span className="stat-label">Pinned</span>
+            </div>
+            <div className="stat-tile">
+              <span className="stat-value">{stats ? stats.archived : "—"}</span>
+              <span className="stat-label">Archived</span>
+            </div>
+            <div className="stat-tile">
+              <span className="stat-value">{stats ? stats.labels : "—"}</span>
+              <span className="stat-label">Labels</span>
+            </div>
+          </div>
+
+          {error && <p className="profile-error">{error}</p>}
+
           <div className="profile-section">
-            <h3>Personal Info</h3>
+            <h3>Personal info</h3>
             <div className="profile-input-group">
-              <label>Name</label>
+              <label>Display name</label>
               <div className="input-with-button">
                 <input
                   type="text"
@@ -215,7 +278,7 @@ function ProfilePage({ user, token, onLogout, onUpdateUser, isDarkMode }) {
                 />
                 <button
                   onClick={handleUpdateName}
-                  disabled={isUpdating || name === user?.name}
+                  disabled={isUpdating || name === user?.name || !name.trim()}
                   className="profile-save-btn"
                 >
                   Save
@@ -225,10 +288,10 @@ function ProfilePage({ user, token, onLogout, onUpdateUser, isDarkMode }) {
           </div>
 
           <div className="profile-section">
-            <h3>Profile Actions</h3>
+            <h3>Appearance</h3>
             <div className="profile-actions-grid">
               <label className="profile-action-btn">
-                <span>Upload Photo</span>
+                <span>Upload photo</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -241,52 +304,155 @@ function ProfilePage({ user, token, onLogout, onUpdateUser, isDarkMode }) {
                   onClick={handleRemoveImage}
                   className="profile-action-btn delete"
                 >
-                  Remove Photo
+                  Remove photo
                 </button>
               )}
-              <button
-                onClick={() => handleExportAll("txt")}
-                className="profile-action-btn"
-                disabled={isUpdating}
-              >
-                Export All (TXT)
-              </button>
-              <button
-                onClick={() => handleExportAll("pdf")}
-                className="profile-action-btn"
-                disabled={isUpdating}
-              >
-                Export All (PDF)
-              </button>
+            </div>
+            <div className="profile-color-picker">
+              <span className="profile-field-label">Theme color</span>
+              <div className="profile-colors">
+                {JOTTER_PROFILE_COLORS.map((color) => (
+                  <button
+                    key={color}
+                    className={`profile-color-dot ${
+                      user?.profileColor === color ? "active" : ""
+                    }`}
+                    style={{ backgroundColor: color }}
+                    onClick={() => handleUpdateColor(color)}
+                    aria-label={`Select color ${color}`}
+                  />
+                ))}
+              </div>
             </div>
           </div>
+
+          {!isVerified && (
+            <div className="profile-section">
+              <h3>Email verification</h3>
+              <p className="profile-hint">
+                Verify your email to secure your account and enable all
+                features.
+              </p>
+              <button
+                type="button"
+                className="profile-action-btn"
+                onClick={handleResendVerification}
+                disabled={isResending}
+              >
+                {isResending ? "Sending..." : "Resend verification email"}
+              </button>
+              {verificationMessage && (
+                <p className="profile-success">{verificationMessage}</p>
+              )}
+            </div>
+          )}
 
           <div className="profile-section">
-            <h3>Theme Color</h3>
-            <div className="profile-colors">
-              {GOOGLE_COLORS.map((color) => (
-                <button
-                  key={color}
-                  className={`profile-color-dot ${
-                    user?.profileColor === color ? "active" : ""
-                  }`}
-                  style={{ backgroundColor: color }}
-                  onClick={() => handleUpdateColor(color)}
-                  aria-label={`Select color ${color}`}
-                />
-              ))}
-            </div>
+            <h3>Change password</h3>
+            <form className="password-form" onSubmit={handleChangePassword}>
+              <input
+                type="password"
+                placeholder="Current password"
+                autoComplete="current-password"
+                value={passwordForm.currentPassword}
+                onChange={(e) =>
+                  setPasswordForm((prev) => ({
+                    ...prev,
+                    currentPassword: e.target.value,
+                  }))
+                }
+              />
+              <input
+                type="password"
+                placeholder="New password"
+                autoComplete="new-password"
+                value={passwordForm.newPassword}
+                onChange={(e) =>
+                  setPasswordForm((prev) => ({
+                    ...prev,
+                    newPassword: e.target.value,
+                  }))
+                }
+              />
+              <input
+                type="password"
+                placeholder="Confirm new password"
+                autoComplete="new-password"
+                value={passwordForm.confirmPassword}
+                onChange={(e) =>
+                  setPasswordForm((prev) => ({
+                    ...prev,
+                    confirmPassword: e.target.value,
+                  }))
+                }
+              />
+              <button
+                type="submit"
+                className="profile-save-btn"
+                disabled={
+                  isChangingPassword ||
+                  !passwordForm.currentPassword ||
+                  !passwordForm.newPassword
+                }
+              >
+                {isChangingPassword ? "Updating..." : "Update password"}
+              </button>
+              {passwordError && (
+                <p className="profile-error">{passwordError}</p>
+              )}
+              {passwordMessage && (
+                <p className="profile-success">{passwordMessage}</p>
+              )}
+            </form>
           </div>
 
-          {error && <p className="profile-error">{error}</p>}
-
-          <div className="profile-footer">
-            <button onClick={() => navigate("/dashboard")} className="text-btn">
-              Back to Notes
-            </button>
-            <button onClick={onLogout} className="logout-btn">
-              Logout
-            </button>
+          <div className="profile-section danger-zone">
+            <h3>Danger zone</h3>
+            <p className="profile-hint">
+              Deleting your account permanently removes your profile and all of
+              your notes. This cannot be undone.
+            </p>
+            {!isConfirmingDelete ? (
+              <button
+                type="button"
+                className="danger-btn"
+                onClick={() => setIsConfirmingDelete(true)}
+              >
+                Delete account
+              </button>
+            ) : (
+              <div className="delete-confirm">
+                <label>
+                  Type <strong>DELETE</strong> to confirm
+                </label>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="DELETE"
+                />
+                <div className="delete-confirm-actions">
+                  <button
+                    type="button"
+                    className="text-btn"
+                    onClick={() => {
+                      setIsConfirmingDelete(false);
+                      setDeleteConfirmText("");
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="danger-btn"
+                    disabled={deleteConfirmText !== "DELETE" || isDeleting}
+                    onClick={handleDeleteAccount}
+                  >
+                    {isDeleting ? "Deleting..." : "Permanently delete"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </section>
       </div>
@@ -297,8 +463,8 @@ function ProfilePage({ user, token, onLogout, onUpdateUser, isDarkMode }) {
 ProfilePage.propTypes = {
   user: PropTypes.object,
   token: PropTypes.string,
-  onLogout: PropTypes.func.isRequired,
   onUpdateUser: PropTypes.func.isRequired,
+  onLogout: PropTypes.func,
   isDarkMode: PropTypes.bool,
 };
 

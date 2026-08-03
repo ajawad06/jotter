@@ -13,7 +13,7 @@ const renderSignup = (props = {}) => {
 describe("SignupPage", () => {
   test("renders signup form correctly", () => {
     renderSignup();
-    expect(screen.getByText(/Sign up/i)).toBeInTheDocument();
+    expect(screen.getByText(/Join Jotter/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/Enter your name/i)).toBeInTheDocument();
     expect(
       screen.getByPlaceholderText(/Enter your email/i),

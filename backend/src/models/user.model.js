@@ -27,6 +27,31 @@ const userSchema = new mongoose.Schema(
       type: String,
       alias: "profileColor",
     },
+    is_email_verified: {
+      type: Boolean,
+      default: false,
+      alias: "isEmailVerified",
+    },
+    email_verification_token_hash: {
+      type: String,
+      select: false,
+    },
+    email_verification_expires: {
+      type: Date,
+      select: false,
+    },
+    password_reset_token_hash: {
+      type: String,
+      select: false,
+    },
+    password_reset_expires: {
+      type: Date,
+      select: false,
+    },
+    labels: {
+      type: [String],
+      default: [],
+    },
   },
   {
     timestamps: {

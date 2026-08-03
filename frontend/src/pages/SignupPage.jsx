@@ -1,6 +1,7 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
 import { Link, useNavigate } from "react-router-dom";
+import AuthBrandPanel from "../components/AuthBrandPanel";
 
 function SignupPage({ onSignup, isSubmitting }) {
   const navigate = useNavigate();
@@ -30,9 +31,13 @@ function SignupPage({ onSignup, isSubmitting }) {
 
   return (
     <div className="auth-container">
+      <AuthBrandPanel ctaLabel="I already have an account" ctaTo="/login" />
+      <div className="auth-form-side">
       <section className="auth-card">
-        <div className="auth-logo-circle">💡</div>
-        <h1>Sign up</h1>
+        <div className="auth-logo-circle">
+          <img src="/jotter-logo.png" alt="" />
+        </div>
+        <h1>Join Jotter</h1>
         <p>Capture everything that matters.</p>
 
         <form onSubmit={handleSubmit} className="auth-form">
@@ -91,6 +96,7 @@ function SignupPage({ onSignup, isSubmitting }) {
           Already registered? <Link to="/login">Sign in</Link>
         </p>
       </section>
+      </div>
     </div>
   );
 }

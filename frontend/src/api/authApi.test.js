@@ -1,4 +1,14 @@
-import { getProfile, login, logout, signup, updateProfile } from "./authApi";
+import {
+  forgotPassword,
+  getProfile,
+  login,
+  logout,
+  resendVerification,
+  resetPassword,
+  signup,
+  updateProfile,
+  verifyEmail,
+} from "./authApi";
 
 const jsonResponse = ({ ok = true, status = 200, data, message } = {}) => ({
   ok,
@@ -96,6 +106,71 @@ describe("authApi", () => {
 
     expect(listener).toHaveBeenCalled();
     window.removeEventListener("unauthorized", listener);
+  });
+
+  test("verifies email with a token", async () => {
+    fetch.mockResolvedValue(
+      jsonResponse({ message: "Email verified successfully" }),
+    );
+
+    await expect(verifyEmail("raw-token")).resolves.toEqual({
+      message: "Email verified successfully",
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:5000/api/auth/verify-email",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: "raw-token" }),
+      },
+    );
+  });
+
+  test("requests a resend of the verification email", async () => {
+    fetch.mockResolvedValue(
+      jsonResponse({ message: "Verification email sent" }),
+    );
+
+    await resendVerification("token");
+
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:5000/api/auth/resend-verification",
+      {
+        method: "POST",
+        headers: { Authorization: "Bearer token" },
+      },
+    );
+  });
+
+  test("submits a forgot password request", async () => {
+    fetch.mockResolvedValue(jsonResponse({ message: "Reset link sent" }));
+
+    await forgotPassword("abdullah@example.com");
+
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:5000/api/auth/forgot-password",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "abdullah@example.com" }),
+      },
+    );
+  });
+
+  test("submits a reset password request", async () => {
+    fetch.mockResolvedValue(jsonResponse({ message: "Password reset" }));
+
+    await resetPassword("raw-token", "newPassword1");
+
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:5000/api/auth/reset-password",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: "raw-token", password: "newPassword1" }),
+      },
+    );
   });
 
   test("handles unexpected non-json responses", async () => {

@@ -36,7 +36,11 @@ describe("Note repository", () => {
     const fakeModel = {
       find: () => ({
         sort: () => ({
-          lean: async () => [mockNoteData],
+          skip: () => ({
+            limit: () => ({
+              lean: async () => [mockNoteData],
+            }),
+          }),
         }),
       }),
     };
@@ -94,5 +98,41 @@ describe("Note repository", () => {
     const success = await repository.deleteByIdAndUserId("note-id", "user-id");
 
     expect(success).to.be.true;
+  });
+
+  it("returns sorted distinct labels for a user", async () => {
+    const fakeModel = {
+      distinct: async () => ["work", "Personal"],
+    };
+
+    const repository = createNoteRepository(fakeModel);
+    const labels = await repository.findLabelsByUserId("user-id");
+
+    expect(labels).to.deep.equal(["Personal", "work"]);
+  });
+
+  it("renames a label across every note that has it, deduping the result", async () => {
+    const updatedNoteIds = [];
+    const fakeModel = {
+      find: () => ({
+        select: () => ({
+          lean: async () => [
+            { _id: "note-1", labels: ["work", "urgent"] },
+            { _id: "note-2", labels: ["work"] },
+          ],
+        }),
+      }),
+      updateOne: async ({ _id }, update) => {
+        updatedNoteIds.push({ id: _id, labels: update.labels });
+      },
+    };
+
+    const repository = createNoteRepository(fakeModel);
+    await repository.renameLabelForUser("user-id", "work", "urgent");
+
+    expect(updatedNoteIds).to.deep.equal([
+      { id: "note-1", labels: ["urgent"] },
+      { id: "note-2", labels: ["urgent"] },
+    ]);
   });
 });
