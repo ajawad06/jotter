@@ -4,10 +4,6 @@ const nodemailer = require("nodemailer");
 const EMAIL_MODULE = require.resolve("../src/config/email");
 const ENV_MODULE = require.resolve("../src/config/env");
 
-let originalSmtpHost;
-let originalSmtpUser;
-let originalSmtpPass;
-
 describe("Email config", () => {
   let originalCreateTransport;
   let sentMails;
