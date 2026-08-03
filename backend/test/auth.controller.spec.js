@@ -181,6 +181,110 @@ describe("Auth controller", () => {
     expect(payload.message).to.equal("Logged out successfully");
   });
 
+  it("returns 200 for successful email verification", async () => {
+    const controller = createAuthController({
+      verifyEmail: async (token) => {
+        expect(token).to.equal("raw-token");
+        return { message: "Email verified successfully" };
+      },
+    });
+
+    const req = { body: { token: "raw-token" } };
+    const res = {
+      status(code) {
+        this.statusCode = code;
+        return this;
+      },
+      json(data) {
+        this.payload = data;
+        return this;
+      },
+    };
+
+    await controller.verifyEmail(req, res, () => {});
+
+    expect(res.statusCode).to.equal(200);
+    expect(res.payload.message).to.equal("Email verified successfully");
+  });
+
+  it("returns 200 for resend verification", async () => {
+    const controller = createAuthController({
+      resendVerification: async (userId) => {
+        expect(userId).to.equal(1);
+        return { message: "Verification email sent" };
+      },
+    });
+
+    const req = { user: { id: 1 } };
+    const res = {
+      status(code) {
+        this.statusCode = code;
+        return this;
+      },
+      json(data) {
+        this.payload = data;
+        return this;
+      },
+    };
+
+    await controller.resendVerification(req, res, () => {});
+
+    expect(res.statusCode).to.equal(200);
+    expect(res.payload.message).to.equal("Verification email sent");
+  });
+
+  it("returns 200 for forgot password", async () => {
+    const controller = createAuthController({
+      forgotPassword: async (email) => {
+        expect(email).to.equal("abdullah@example.com");
+        return { message: "If an account exists, a reset link has been sent" };
+      },
+    });
+
+    const req = { body: { email: "abdullah@example.com" } };
+    const res = {
+      status(code) {
+        this.statusCode = code;
+        return this;
+      },
+      json(data) {
+        this.payload = data;
+        return this;
+      },
+    };
+
+    await controller.forgotPassword(req, res, () => {});
+
+    expect(res.statusCode).to.equal(200);
+  });
+
+  it("returns 200 for reset password", async () => {
+    const controller = createAuthController({
+      resetPassword: async (token, password) => {
+        expect(token).to.equal("raw-token");
+        expect(password).to.equal("newPassword1");
+        return { message: "Password has been reset successfully" };
+      },
+    });
+
+    const req = { body: { token: "raw-token", password: "newPassword1" } };
+    const res = {
+      status(code) {
+        this.statusCode = code;
+        return this;
+      },
+      json(data) {
+        this.payload = data;
+        return this;
+      },
+    };
+
+    await controller.resetPassword(req, res, () => {});
+
+    expect(res.statusCode).to.equal(200);
+    expect(res.payload.message).to.equal("Password has been reset successfully");
+  });
+
   it("passes service errors to next middleware", async () => {
     const expectedError = new Error("service failed");
     const fakeService = {

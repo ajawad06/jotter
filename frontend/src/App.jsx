@@ -4,10 +4,12 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { login, logout, signup } from "./api/authApi";
 import DashboardPage from "./pages/DashboardPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import LoginPage from "./pages/LoginPage";
 import ProfilePage from "./pages/ProfilePage";
-import RichTextEditorPage from "./pages/RichTextEditorPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import SignupPage from "./pages/SignupPage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
 import {
   clearSession,
   getToken,
@@ -130,6 +132,7 @@ function App() {
                 onLogout={handleLogout}
                 isDarkMode={isDarkMode}
                 onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
+                onUpdateUser={handleUpdateSessionUser}
               />
             </ProtectedRoute>
           }
@@ -141,24 +144,16 @@ function App() {
               <ProfilePage
                 token={session.token}
                 user={session.user}
-                onLogout={handleLogout}
                 onUpdateUser={handleUpdateSessionUser}
+                onLogout={handleLogout}
                 isDarkMode={isDarkMode}
               />
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/editor"
-          element={
-            <ProtectedRoute isAuthenticated={isAuthenticated}>
-              <RichTextEditorPage
-                token={session.token}
-                isDarkMode={isDarkMode}
-              />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </main>

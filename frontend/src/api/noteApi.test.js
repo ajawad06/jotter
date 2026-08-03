@@ -1,9 +1,16 @@
 import {
+  createLabel,
   createNote,
   deleteNote,
+  duplicateNote,
+  fetchLabels,
   listNotes,
+  removeAttachment,
+  renameLabel,
+  reorderNotes,
   updateNote,
   updateNoteAppearance,
+  uploadAttachment,
 } from "./noteApi";
 
 const jsonResponse = ({ ok = true, status = 200, data, message } = {}) => ({
@@ -101,6 +108,151 @@ describe("noteApi", () => {
 
     expect(listener).toHaveBeenCalled();
     window.removeEventListener("unauthorized", listener);
+  });
+
+  test("lists notes with query filters", async () => {
+    fetch.mockResolvedValue(jsonResponse({ data: [] }));
+
+    await listNotes("token", { status: "archive", label: "work" });
+
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:5000/api/notes?status=archive&label=work",
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer token",
+        },
+      },
+    );
+  });
+
+  test("fetches distinct labels", async () => {
+    fetch.mockResolvedValue(jsonResponse({ data: ["personal", "work"] }));
+
+    await expect(fetchLabels("token")).resolves.toEqual(["personal", "work"]);
+
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:5000/api/notes/labels",
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer token",
+        },
+      },
+    );
+  });
+
+  test("creates a new label", async () => {
+    fetch.mockResolvedValue(jsonResponse({ data: ["travel"] }));
+
+    await expect(createLabel("token", "travel")).resolves.toEqual(["travel"]);
+
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:5000/api/notes/labels",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer token",
+        },
+        body: JSON.stringify({ name: "travel" }),
+      },
+    );
+  });
+
+  test("renames a label", async () => {
+    fetch.mockResolvedValue(jsonResponse({ data: ["office"] }));
+
+    await expect(renameLabel("token", "work", "office")).resolves.toEqual([
+      "office",
+    ]);
+
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:5000/api/notes/labels/work",
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer token",
+        },
+        body: JSON.stringify({ newName: "office" }),
+      },
+    );
+  });
+
+  test("duplicates a note", async () => {
+    fetch.mockResolvedValue(jsonResponse({ data: { id: "2" } }));
+
+    await expect(duplicateNote("token", "1")).resolves.toEqual({ id: "2" });
+
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:5000/api/notes/1/duplicate",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer token",
+        },
+      },
+    );
+  });
+
+  test("reorders notes", async () => {
+    fetch.mockResolvedValue(jsonResponse({ data: [{ id: "b" }, { id: "a" }] }));
+
+    await reorderNotes("token", ["b", "a"]);
+
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:5000/api/notes/reorder",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer token",
+        },
+        body: JSON.stringify({ orderedIds: ["b", "a"] }),
+      },
+    );
+  });
+
+  test("uploads an attachment as multipart form data", async () => {
+    fetch.mockResolvedValue(
+      jsonResponse({ data: { id: "1", attachments: [] } }),
+    );
+    const file = new File(["content"], "photo.png", { type: "image/png" });
+
+    await uploadAttachment("token", "1", file);
+
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:5000/api/notes/1/attachments",
+      expect.objectContaining({
+        method: "POST",
+        headers: { Authorization: "Bearer token" },
+      }),
+    );
+    const [, options] = fetch.mock.calls[0];
+    expect(options.body).toBeInstanceOf(FormData);
+  });
+
+  test("removes an attachment", async () => {
+    fetch.mockResolvedValue(
+      jsonResponse({ data: { id: "1", attachments: [] } }),
+    );
+
+    await removeAttachment("token", "1", "att-1");
+
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:5000/api/notes/1/attachments/att-1",
+      {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer token",
+        },
+      },
+    );
   });
 
   test("uses a fallback message for non-json failures", async () => {

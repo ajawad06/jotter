@@ -2,11 +2,14 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const pinoHttp = require("pino-http");
+const swaggerUi = require("swagger-ui-express");
 
 const logger = require("./config/logger");
 const authRoutes = require("./routes/auth.routes");
 const healthRoutes = require("./routes/health.routes");
 const noteRoutes = require("./routes/note.routes");
+const aiRoutes = require("./routes/ai.routes");
+const swaggerSpec = require("./config/swagger");
 const notFound = require("./middlewares/notFound");
 const errorHandler = require("./middlewares/errorHandler");
 
@@ -44,6 +47,16 @@ app.use(
 app.use("/api/health", healthRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/notes", noteRoutes);
+app.use("/api/ai", aiRoutes);
+app.use(
+  "/api/docs",
+  (req, res, next) => {
+    res.removeHeader("Content-Security-Policy");
+    next();
+  },
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec),
+);
 
 app.use(notFound);
 app.use(errorHandler);

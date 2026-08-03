@@ -1,27 +1,23 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import ProfilePage from "./ProfilePage";
-import { updateProfile } from "../api/authApi";
+import {
+  changePassword,
+  deleteAccount,
+  resendVerification,
+  updateProfile,
+} from "../api/authApi";
 import { listNotes } from "../api/noteApi";
 
-// Mock the API calls
 jest.mock("../api/authApi");
 jest.mock("../api/noteApi");
-jest.mock("jspdf", () => ({
-  jsPDF: jest.fn().mockImplementation(() => ({
-    addPage: jest.fn(),
-    save: jest.fn(),
-    setFontSize: jest.fn(),
-    splitTextToSize: jest.fn((text) => [text]),
-    text: jest.fn(),
-  })),
-}));
 
 const mockUser = {
   name: "John Doe",
   email: "john@example.com",
   profileColor: "#1a73e8",
   profileImage: "",
+  isEmailVerified: true,
 };
 
 const renderProfile = (props = {}) => {
@@ -30,8 +26,8 @@ const renderProfile = (props = {}) => {
       <ProfilePage
         user={mockUser}
         token="mock-token"
-        onLogout={() => {}}
         onUpdateUser={() => {}}
+        onLogout={() => {}}
         isDarkMode={false}
         {...props}
       />
@@ -42,15 +38,35 @@ const renderProfile = (props = {}) => {
 describe("ProfilePage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Spy on window.alert
     jest.spyOn(window, "alert").mockImplementation(() => {});
-    URL.createObjectURL = jest.fn(() => "blob:mock-export");
+    listNotes.mockResolvedValue([]);
   });
 
   test("renders profile information correctly", () => {
     renderProfile();
     expect(screen.getByDisplayValue("John Doe")).toBeInTheDocument();
     expect(screen.getByText("john@example.com")).toBeInTheDocument();
+  });
+
+  test("shows account stats derived from notes", async () => {
+    listNotes.mockResolvedValue([
+      { id: "1", isPinned: true, isArchived: false, isTrashed: false, labels: ["work"] },
+      { id: "2", isPinned: false, isArchived: true, isTrashed: false, labels: ["work", "home"] },
+      { id: "3", isPinned: false, isArchived: false, isTrashed: true, labels: [] },
+    ]);
+
+    renderProfile();
+
+    // Total (non-trashed) = 2, Pinned = 1, Archived = 1, Labels = 2 unique
+    await waitFor(() => {
+      const stats = document.querySelectorAll(".stat-value");
+      expect(Array.from(stats).map((s) => s.textContent)).toEqual([
+        "2",
+        "1",
+        "1",
+        "2",
+      ]);
+    });
   });
 
   test("updates user name successfully", async () => {
@@ -61,36 +77,14 @@ describe("ProfilePage", () => {
 
     const nameInput = screen.getByDisplayValue("John Doe");
     fireEvent.change(nameInput, { target: { value: "New Name" } });
-    fireEvent.click(screen.getByRole("button", { name: /Save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^Save$/i }));
 
     await waitFor(() => {
       expect(updateProfile).toHaveBeenCalledWith("mock-token", {
         name: "New Name",
       });
       expect(onUpdateUserMock).toHaveBeenCalled();
-      expect(window.alert).toHaveBeenCalledWith("Profile name updated!");
     });
-  });
-
-  test("handles image upload profile update", async () => {
-    const onUpdateUserMock = jest.fn();
-    updateProfile.mockResolvedValue({
-      ...mockUser,
-      profileImage: "data:image/png;base64,mock",
-    });
-
-    renderProfile({ onUpdateUser: onUpdateUserMock });
-
-    // We can't easily trigger the FileReader onload with standard RTL events without more complex mocking,
-    // but we can verify the input exists and handle the flow.
-    const fileInput = screen.getByLabelText(/Upload Photo/i);
-    const file = new File(["test"], "test.png", { type: "image/png" });
-
-    fireEvent.change(fileInput, { target: { files: [file] } });
-
-    // Since FileReader is async, we just check if it was called (requires more complex setup to test full base64 conversion)
-    // For now, let's verify UI elements.
-    expect(fileInput).toBeInTheDocument();
   });
 
   test("changes profile color", async () => {
@@ -109,12 +103,88 @@ describe("ProfilePage", () => {
     });
   });
 
-  test("logs out when logout button is clicked", () => {
+  test("shows an unverified badge and resends verification", async () => {
+    resendVerification.mockResolvedValue({});
+    renderProfile({ user: { ...mockUser, isEmailVerified: false } });
+
+    expect(screen.getByText("Email not verified")).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Resend verification email/i }),
+    );
+
+    await waitFor(() => {
+      expect(resendVerification).toHaveBeenCalledWith("mock-token");
+      expect(
+        screen.getByText(/Verification email sent/i),
+      ).toBeInTheDocument();
+    });
+  });
+
+  test("changes the password", async () => {
+    changePassword.mockResolvedValue({});
+    renderProfile();
+
+    fireEvent.change(screen.getByPlaceholderText("Current password"), {
+      target: { value: "oldpass123" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("New password"), {
+      target: { value: "newpass123" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Confirm new password"), {
+      target: { value: "newpass123" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Update password/i }));
+
+    await waitFor(() => {
+      expect(changePassword).toHaveBeenCalledWith(
+        "mock-token",
+        "oldpass123",
+        "newpass123",
+      );
+      expect(
+        screen.getByText("Password changed successfully."),
+      ).toBeInTheDocument();
+    });
+  });
+
+  test("rejects a password change when confirmation does not match", async () => {
+    renderProfile();
+
+    fireEvent.change(screen.getByPlaceholderText("Current password"), {
+      target: { value: "oldpass123" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("New password"), {
+      target: { value: "newpass123" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Confirm new password"), {
+      target: { value: "different" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Update password/i }));
+
+    expect(
+      await screen.findByText("New passwords do not match."),
+    ).toBeInTheDocument();
+    expect(changePassword).not.toHaveBeenCalled();
+  });
+
+  test("deletes the account after typed confirmation", async () => {
     const onLogoutMock = jest.fn();
+    deleteAccount.mockResolvedValue({});
     renderProfile({ onLogout: onLogoutMock });
 
-    fireEvent.click(screen.getByText(/Logout/i));
-    expect(onLogoutMock).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: /^Delete account$/i }));
+
+    const confirmInput = screen.getByPlaceholderText("DELETE");
+    fireEvent.change(confirmInput, { target: { value: "DELETE" } });
+    fireEvent.click(
+      screen.getByRole("button", { name: /Permanently delete/i }),
+    );
+
+    await waitFor(() => {
+      expect(deleteAccount).toHaveBeenCalledWith("mock-token");
+      expect(onLogoutMock).toHaveBeenCalled();
+    });
   });
 
   test("shows profile update errors", async () => {
@@ -124,7 +194,7 @@ describe("ProfilePage", () => {
     fireEvent.change(screen.getByDisplayValue("John Doe"), {
       target: { value: "Broken Update" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^Save$/i }));
 
     expect(await screen.findByText("Profile update failed")).toBeInTheDocument();
   });
@@ -138,7 +208,7 @@ describe("ProfilePage", () => {
       onUpdateUser: onUpdateUserMock,
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /Remove Photo/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Remove photo/i }));
 
     await waitFor(() => {
       expect(updateProfile).toHaveBeenCalledWith("mock-token", {
@@ -146,44 +216,5 @@ describe("ProfilePage", () => {
       });
       expect(onUpdateUserMock).toHaveBeenCalled();
     });
-  });
-
-  test("exports all notes as text", async () => {
-    const appendSpy = jest.spyOn(document.body, "appendChild");
-    const removeSpy = jest.spyOn(document.body, "removeChild");
-    listNotes.mockResolvedValue([
-      {
-        id: "1",
-        title: "Exported Note",
-        content: "<p>Hello&nbsp;world</p>",
-      },
-    ]);
-
-    renderProfile();
-
-    fireEvent.click(screen.getByRole("button", { name: /Export All \(TXT\)/i }));
-
-    await waitFor(() => {
-      expect(listNotes).toHaveBeenCalledWith("mock-token");
-      expect(URL.createObjectURL).toHaveBeenCalled();
-      expect(appendSpy).toHaveBeenCalled();
-      expect(removeSpy).toHaveBeenCalled();
-    });
-  });
-
-  test("handles empty and failed exports", async () => {
-    listNotes.mockResolvedValueOnce([]);
-    renderProfile();
-
-    fireEvent.click(screen.getByRole("button", { name: /Export All \(TXT\)/i }));
-
-    await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith("No notes to export.");
-    });
-
-    listNotes.mockRejectedValueOnce(new Error("Network down"));
-    fireEvent.click(screen.getByRole("button", { name: /Export All \(PDF\)/i }));
-
-    expect(await screen.findByText("Export failed: Network down")).toBeInTheDocument();
   });
 });

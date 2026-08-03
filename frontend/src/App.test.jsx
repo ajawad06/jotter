@@ -20,7 +20,9 @@ describe("App", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("heading", { name: "Login" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Welcome back" }),
+    ).toBeInTheDocument();
   });
 
   it("logs user in and redirects to dashboard", async () => {
@@ -61,7 +63,7 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
     expect(
-      await screen.findByRole("heading", { name: "Notes" }),
+      await screen.findByRole("button", { name: "Notes" }),
     ).toBeInTheDocument();
     expect(localStorage.getItem("notes_app_token")).toBe("test-token");
   });
@@ -90,14 +92,14 @@ describe("App", () => {
       </MemoryRouter>,
     );
 
-    // Profile page navigation
-    await user.click(screen.getByRole("button", { name: "Profile" }));
+    // Open the account menu in the navbar
+    await user.click(screen.getByRole("button", { name: "Account menu" }));
 
-    // Now click Logout on ProfilePage
+    // Click Logout in the dropdown
     await user.click(screen.getByRole("button", { name: "Logout" }));
 
     expect(
-      await screen.findByRole("heading", { name: "Login" }),
+      await screen.findByRole("heading", { name: "Welcome back" }),
     ).toBeInTheDocument();
   });
 });

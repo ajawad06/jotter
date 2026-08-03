@@ -119,6 +119,7 @@ describe("Note service", () => {
           isPinned: true,
           isArchived: false,
           isTrashed: false,
+          trashedAt: null,
         });
         return true;
       },
@@ -143,5 +144,185 @@ describe("Note service", () => {
 
     expect(result.id).to.equal(9);
     expect(result.isPinned).to.equal(true);
+  });
+
+  it("duplicates an existing note as a copy", async () => {
+    const originalNote = {
+      id: 1,
+      title: "Original",
+      content: "Body",
+      color: "#ffffff",
+      isPinned: true,
+      isArchived: true,
+      isTrashed: false,
+      reminderAt: new Date(),
+    };
+
+    const fakeRepository = {
+      findByIdAndUserId: async () => originalNote,
+      createNote: async (payload) => ({ id: 2, ...payload }),
+    };
+
+    const noteService = createNoteService({ noteRepository: fakeRepository });
+    const copy = await noteService.duplicateUserNote(1, 1);
+
+    expect(copy.title).to.equal("Original copy");
+    expect(copy.isPinned).to.equal(false);
+    expect(copy.isArchived).to.equal(false);
+    expect(copy.isTrashed).to.equal(false);
+  });
+
+  it("reorders notes by updating each note's order", async () => {
+    const updatedOrders = [];
+    const fakeRepository = {
+      updateByIdAndUserId: async (noteId, _userId, fields) => {
+        updatedOrders.push([noteId, fields.order]);
+        return true;
+      },
+      findByIdAndUserId: async (noteId) => ({ id: noteId }),
+      findAllByUserId: async () => [{ id: "b" }, { id: "a" }],
+    };
+
+    const noteService = createNoteService({ noteRepository: fakeRepository });
+    const result = await noteService.reorderUserNotes(1, ["b", "a"]);
+
+    expect(updatedOrders).to.deep.equal([
+      ["b", 0],
+      ["a", 1],
+    ]);
+    expect(result).to.have.length(2);
+  });
+
+  it("rejects reorder with a non-array payload", async () => {
+    const noteService = createNoteService({ noteRepository: {} });
+
+    try {
+      await noteService.reorderUserNotes(1, "not-an-array");
+      throw new Error("Expected reorderUserNotes to fail");
+    } catch (error) {
+      expect(error).to.be.instanceOf(AppError);
+      expect(error.statusCode).to.equal(400);
+    }
+  });
+
+  it("lists distinct labels for a user", async () => {
+    const noteService = createNoteService({
+      noteRepository: {
+        findLabelsByUserId: async () => ["personal", "work"],
+      },
+    });
+
+    const labels = await noteService.listUserLabels(1);
+    expect(labels).to.deep.equal(["personal", "work"]);
+  });
+
+  it("merges note-derived labels with user-created labels", async () => {
+    const noteService = createNoteService({
+      noteRepository: {
+        findLabelsByUserId: async () => ["work"],
+      },
+      userRepository: {
+        getLabels: async () => ["empty-label", "work"],
+      },
+    });
+
+    const labels = await noteService.listUserLabels(1);
+    expect(labels).to.deep.equal(["empty-label", "work"]);
+  });
+
+  it("creates a new label for a user", async () => {
+    let addedLabel;
+    const noteService = createNoteService({
+      noteRepository: {
+        findLabelsByUserId: async () => [],
+      },
+      userRepository: {
+        addLabel: async (userId, label) => {
+          addedLabel = label;
+        },
+        getLabels: async () => ["travel"],
+      },
+    });
+
+    const labels = await noteService.createLabel(1, "  travel  ");
+
+    expect(addedLabel).to.equal("travel");
+    expect(labels).to.deep.equal(["travel"]);
+  });
+
+  it("rejects creating a label with an empty name", async () => {
+    const noteService = createNoteService({
+      noteRepository: {},
+      userRepository: {},
+    });
+
+    try {
+      await noteService.createLabel(1, "   ");
+      throw new Error("Expected createLabel to fail");
+    } catch (error) {
+      expect(error).to.be.instanceOf(AppError);
+      expect(error.statusCode).to.equal(400);
+    }
+  });
+
+  it("renames a label everywhere it is used", async () => {
+    let renameArgsForNotes;
+    let renameArgsForUser;
+    const noteService = createNoteService({
+      noteRepository: {
+        renameLabelForUser: async (userId, oldName, newName) => {
+          renameArgsForNotes = [userId, oldName, newName];
+        },
+        findLabelsByUserId: async () => ["personal"],
+      },
+      userRepository: {
+        renameLabel: async (userId, oldName, newName) => {
+          renameArgsForUser = [userId, oldName, newName];
+        },
+        getLabels: async () => [],
+      },
+    });
+
+    const labels = await noteService.renameLabel(1, "work", "personal");
+
+    expect(renameArgsForNotes).to.deep.equal([1, "work", "personal"]);
+    expect(renameArgsForUser).to.deep.equal([1, "work", "personal"]);
+    expect(labels).to.deep.equal(["personal"]);
+  });
+
+  it("skips the rename when the name is unchanged", async () => {
+    let renameCalled = false;
+    const noteService = createNoteService({
+      noteRepository: {
+        renameLabelForUser: async () => {
+          renameCalled = true;
+        },
+        findLabelsByUserId: async () => ["work"],
+      },
+      userRepository: {
+        renameLabel: async () => {
+          renameCalled = true;
+        },
+        getLabels: async () => [],
+      },
+    });
+
+    await noteService.renameLabel(1, "work", "work");
+    expect(renameCalled).to.equal(false);
+  });
+
+  it("rejects renaming a label with a missing new name", async () => {
+    const noteService = createNoteService({
+      noteRepository: {},
+      userRepository: {},
+    });
+
+    try {
+      await noteService.renameLabel(1, "work", "");
+      throw new Error("Expected renameLabel to fail");
+    } catch (error) {
+      expect(error).to.be.instanceOf(AppError);
+      expect(error.statusCode).to.equal(400);
+    }
   });
 });

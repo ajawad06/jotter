@@ -13,7 +13,7 @@ const renderLogin = (props = {}) => {
 describe("LoginPage", () => {
   test("renders login form correctly", () => {
     renderLogin();
-    expect(screen.getByText(/Login/i)).toBeInTheDocument();
+    expect(screen.getByText(/Welcome back/i)).toBeInTheDocument();
     expect(
       screen.getByPlaceholderText(/Enter your email/i),
     ).toBeInTheDocument();
