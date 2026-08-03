@@ -2,19 +2,32 @@ const { expect } = require("chai");
 const nodemailer = require("nodemailer");
 
 const EMAIL_MODULE = require.resolve("../src/config/email");
+const ENV_MODULE = require.resolve("../src/config/env");
+
+let originalSmtpHost;
+let originalSmtpUser;
+let originalSmtpPass;
 
 describe("Email config", () => {
   let originalCreateTransport;
   let sentMails;
 
   const loadEmailModule = () => {
+    delete require.cache[ENV_MODULE];
     delete require.cache[EMAIL_MODULE];
+
     return require("../src/config/email");
   };
 
   beforeEach(() => {
     sentMails = [];
+
+    process.env.SMTP_HOST = "smtp.test";
+    process.env.SMTP_USER = "user";
+    process.env.SMTP_PASS = "pass";
+
     originalCreateTransport = nodemailer.createTransport;
+
     nodemailer.createTransport = () => ({
       sendMail: async (options) => {
         sentMails.push(options);
@@ -25,6 +38,12 @@ describe("Email config", () => {
 
   afterEach(() => {
     nodemailer.createTransport = originalCreateTransport;
+
+    delete process.env.SMTP_HOST;
+    delete process.env.SMTP_USER;
+    delete process.env.SMTP_PASS;
+
+    delete require.cache[ENV_MODULE];
     delete require.cache[EMAIL_MODULE];
   });
 
